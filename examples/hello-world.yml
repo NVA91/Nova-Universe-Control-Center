@@ -1,0 +1,32 @@
+---
+# ============================================================================
+# hello-world.yml - Beispiel-Playbook für Ansible Test Controller
+# ============================================================================
+# Dieses Playbook zeigt die grundlegenden Konzepte von Ansible.
+# Es kann als Vorlage für eigene Playbooks verwendet werden.
+
+- name: Hello World - Ansible Test Controller
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  
+  vars:
+    greeting: "Hallo vom Ansible Test Controller!"
+    timestamp: "{{ ansible_date_time.iso8601 }}"
+  
+  tasks:
+    - name: Zeige Begrüßung
+      debug:
+        msg: "{{ greeting }}"
+    
+    - name: Zeige Timestamp
+      debug:
+        msg: "Zeitstempel: {{ timestamp }}"
+    
+    - name: Zeige Ansible-Version
+      debug:
+        msg: "Ansible-Version: {{ ansible_version.full }}"
+    
+    - name: Zeige Erfolg
+      debug:
+        msg: "✓ Playbook erfolgreich ausgeführt!"

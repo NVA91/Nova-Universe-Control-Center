@@ -1,0 +1,158 @@
+# ============================================================================
+# Makefile - Ansible Test Controller (v2.0)
+# ============================================================================
+# Vereinheitlichte Einstiegspunkte für häufige Aufgaben.
+# Alle Kommandos sind optional und können über Variablen angepasst werden.
+
+.PHONY: help build up down run shell lint syntax-check clean logs test ci-test version
+
+# ============================================================================
+# Variablen
+# ============================================================================
+
+DOCKER_COMPOSE := docker-compose
+PROJECT_NAME := ansible-controller
+CONTAINER_NAME := ansible-controller
+PLAYBOOK ?= site.yml
+ANSIBLE_VERBOSITY ?= 0
+
+# Git-Hash für Versionierung (optional)
+GIT_HASH := $(shell git rev-parse --short HEAD 2>/dev/null || echo "local")
+BUILD_DATE := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+# ============================================================================
+# Ziele
+# ============================================================================
+
+help:
+	@echo "Ansible Test Controller - Makefile (v2.0)"
+	@echo ""
+	@echo "Verfügbare Kommandos:"
+	@echo ""
+	@echo "  make help              - Zeige diese Hilfe"
+	@echo "  make build             - Baue das Docker-Image"
+	@echo "  make run               - Führe das Playbook aus"
+	@echo "  make shell             - Öffne eine interaktive Shell"
+	@echo "  make lint              - Führe ansible-lint aus"
+	@echo "  make syntax-check      - Prüfe Playbook-Syntax"
+	@echo "  make test              - Führe alle Tests durch"
+	@echo "  make ci-test           - CI-Modus (für Pipelines)"
+	@echo "  make clean             - Lösche Container und Images"
+	@echo "  make logs              - Zeige Container-Logs"
+	@echo "  make version           - Zeige Versionen"
+	@echo ""
+	@echo "Variablen:"
+	@echo "  PLAYBOOK=<file>        - Anderes Playbook angeben (Standard: site.yml)"
+	@echo "  ANSIBLE_VERBOSITY=<n>  - Verbosity-Level 0-4 (Standard: 0)"
+	@echo ""
+	@echo "Beispiele:"
+	@echo "  make build"
+	@echo "  make run"
+	@echo "  make run PLAYBOOK=my-playbook.yml ANSIBLE_VERBOSITY=2"
+	@echo "  make lint"
+	@echo "  make test"
+	@echo ""
+
+# ============================================================================
+# Basis-Kommandos
+# ============================================================================
+
+build:
+	@echo "Baue Docker-Image..."
+	@$(DOCKER_COMPOSE) build
+
+up:
+	@echo "Starte Container..."
+	@$(DOCKER_COMPOSE) up -d
+
+down:
+	@echo "Stoppe Container..."
+	@$(DOCKER_COMPOSE) down
+
+run:
+	@echo "Führe Playbook aus: $(PLAYBOOK)"
+	@$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) ansible-playbook $(PLAYBOOK)
+
+shell:
+	@echo "Öffne interaktive Shell..."
+	@$(DOCKER_COMPOSE) run --rm -it $(CONTAINER_NAME) bash
+
+clean:
+	@echo "Räume auf..."
+	@$(DOCKER_COMPOSE) down
+	@docker rmi $(PROJECT_NAME):latest 2>/dev/null || true
+	@echo "Aufgeräumt!"
+
+logs:
+	@echo "Zeige Logs..."
+	@$(DOCKER_COMPOSE) logs -f
+
+# ============================================================================
+# Linting und Validierung
+# ============================================================================
+
+lint:
+	@echo "Führe ansible-lint aus..."
+	@$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) ansible-lint .
+
+syntax-check:
+	@echo "Prüfe Playbook-Syntax: $(PLAYBOOK)"
+	@$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) ansible-playbook $(PLAYBOOK) --syntax-check
+
+yamllint:
+	@echo "Führe yamllint aus..."
+	@$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) yamllint .
+
+# ============================================================================
+# Tests
+# ============================================================================
+
+test: lint syntax-check
+	@echo ""
+	@echo "✓ Alle Tests erfolgreich!"
+
+ci-test: lint syntax-check
+	@echo ""
+	@echo "✓ CI-Tests erfolgreich!"
+	@echo "Bereit für Deployment!"
+
+# ============================================================================
+# Informationen
+# ============================================================================
+
+version:
+	@echo "Ansible Test Controller - Versionen"
+	@echo ""
+	@echo "Build-Informationen:"
+	@echo "  Git Hash: $(GIT_HASH)"
+	@echo "  Build Date: $(BUILD_DATE)"
+	@echo ""
+	@$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) ansible --version
+	@echo ""
+	@$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) python3 --version
+
+inventory:
+	@echo "Zeige Inventory..."
+	@$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) ansible-inventory -i ./inventory --list
+
+ping:
+	@echo "Ping an alle Hosts..."
+	@$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) ansible all -m ping
+
+# ============================================================================
+# Erweiterte Kommandos
+# ============================================================================
+
+dry-run:
+	@echo "Führe Playbook im Dry-Run aus: $(PLAYBOOK)"
+	@$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) ansible-playbook $(PLAYBOOK) --check
+
+verbose:
+	@echo "Führe Playbook mit Verbose-Output aus: $(PLAYBOOK)"
+	@$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) ansible-playbook $(PLAYBOOK) -vvv
+
+# ============================================================================
+# Standardziel
+# ============================================================================
+
+.DEFAULT_GOAL := help

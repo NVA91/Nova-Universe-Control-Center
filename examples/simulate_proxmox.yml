@@ -1,0 +1,26 @@
+---
+- name: Simuliere Server-Setup (Proxmox Base)
+  hosts: localhost
+  become: true  # Wichtig: Simuliert Root-Rechte (sudo)
+  gather_facts: true
+
+  tasks:
+    - name: Prüfe, welches OS wir sind
+      debug:
+        msg: "Ich bin {{ ansible_distribution }} {{ ansible_distribution_version }} und spiele heute Proxmox!"
+
+    - name: Installiere Midnight Commander (Simulation einer Paket-Installation)
+      apt:
+        name: mc
+        state: present
+        update_cache: yes
+
+    - name: Lege einen Admin-User an (Simulation User-Setup)
+      user:
+        name: testadmin
+        shell: /bin/bash
+        state: present
+
+    - name: Zeige Erfolg
+      debug:
+        msg: "Setup erfolgreich simuliert! Paket 'mc' ist installiert."

@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Streamlit Secrets
+.streamlit/secrets.toml
+*.toml.backup
+
+# Environment Files
+.env
+.env.local
+.env.*.local
+*.env
+
+# Ansible Vault
+vault_pass.txt
+.vault_pass
+*.vault
+
+# Docker
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Temporary
+*.tmp
+*.temp
+.cache/
+
+# Backups
+*.backup
+*.bak

@@ -1,0 +1,46 @@
+---
+# ============================================================================
+# inventory.yml - Beispiel-Inventory für Ansible Test Controller
+# ============================================================================
+# Dieses Inventory zeigt, wie Hosts und Gruppen definiert werden.
+# Kopiere dieses Beispiel in dein inventory/-Verzeichnis.
+
+all:
+  hosts:
+    localhost:
+      ansible_connection: local
+      ansible_python_interpreter: /usr/bin/python3
+  
+  children:
+    # Beispiel-Gruppen
+    webservers:
+      hosts:
+        # web1.example.com:
+        # web2.example.com:
+      vars:
+        # Gruppenvariablen
+        http_port: 80
+        https_port: 443
+    
+    databases:
+      hosts:
+        # db1.example.com:
+        # db2.example.com:
+      vars:
+        # Gruppenvariablen
+        db_port: 5432
+    
+    development:
+      hosts:
+        localhost:
+      vars:
+        environment: development
+        debug: true
+    
+    production:
+      hosts:
+        # prod1.example.com:
+        # prod2.example.com:
+      vars:
+        environment: production
+        debug: false

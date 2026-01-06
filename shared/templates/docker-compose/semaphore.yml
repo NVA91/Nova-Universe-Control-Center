@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  semaphore-db:
+    image: postgres:15-alpine
+    container_name: semaphore-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: semaphore
+      POSTGRES_PASSWORD: ${SEMAPHORE_DB_PASSWORD:-semaphore_secure_password}
+      POSTGRES_DB: semaphore
+    volumes:
+      - semaphore-db-data:/var/lib/postgresql/data
+    networks:
+      - semaphore-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U semaphore"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  semaphore:
+    image: semaphoreui/semaphore:latest
+    container_name: semaphore
+    restart: unless-stopped
+    ports:
+      - "${SEMAPHORE_PORT:-3000}:3000"
+    environment:
+      # Database Configuration
+      SEMAPHORE_DB_DIALECT: postgres
+      SEMAPHORE_DB_HOST: semaphore-db
+      SEMAPHORE_DB_PORT: 5432
+      SEMAPHORE_DB_USER: semaphore
+      SEMAPHORE_DB_PASS: ${SEMAPHORE_DB_PASSWORD:-semaphore_secure_password}
+      SEMAPHORE_DB_NAME: semaphore
+      
+      # Admin User (initial setup)
+      SEMAPHORE_ADMIN: ${SEMAPHORE_ADMIN_USER:-admin}
+      SEMAPHORE_ADMIN_PASSWORD: ${SEMAPHORE_ADMIN_PASSWORD:-changeme}
+      SEMAPHORE_ADMIN_NAME: ${SEMAPHORE_ADMIN_NAME:-Administrator}
+      SEMAPHORE_ADMIN_EMAIL: ${SEMAPHORE_ADMIN_EMAIL:-admin@localhost}
+      
+      # Application Configuration
+      SEMAPHORE_ACCESS_KEY_ENCRYPTION: ${SEMAPHORE_ACCESS_KEY:-your-secret-key-change-me}
+      SEMAPHORE_LDAP_ACTIVATED: 'no'
+      
+      # Web Configuration
+      SEMAPHORE_WEB_ROOT: ${SEMAPHORE_WEB_ROOT:-http://localhost:3000}
+      
+      # Ansible Configuration
+      ANSIBLE_HOST_KEY_CHECKING: 'False'
+      
+    volumes:
+      # Semaphore Configuration
+      - semaphore-config:/etc/semaphore
+      
+      # Mount Ansible Project (read-only for security)
+      - ${ANSIBLE_PROJECT_PATH:-/opt/ansible}:/ansible:ro
+      
+      # SSH Keys (for deployment)
+      - ${SSH_KEY_PATH:-./ssh}:/root/.ssh:ro
+      
+      # Playbook Logs
+      - semaphore-logs:/tmp/semaphore
+      
+    networks:
+      - semaphore-network
+    depends_on:
+      semaphore-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  semaphore-db-data:
+    driver: local
+  semaphore-config:
+    driver: local
+  semaphore-logs:
+    driver: local
+
+networks:
+  semaphore-network:
+    driver: bridge

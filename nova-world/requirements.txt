@@ -1,0 +1,37 @@
+# ============================================================================
+# Nova-World Dashboard - Python Dependencies
+# ============================================================================
+
+# Core Framework
+streamlit>=1.30.0
+
+# Voice Control
+audio-recorder-streamlit>=0.0.8
+
+# AI & ML
+openai>=1.0.0
+
+# Docker Integration
+docker>=7.0.0
+
+# HTTP Requests (Semaphore API)
+requests>=2.31.0
+
+# System Monitoring
+psutil>=5.9.0
+
+# Data Visualization
+plotly>=5.18.0
+altair>=5.2.0
+
+# Configuration Management
+python-dotenv>=1.0.0
+pyyaml>=6.0
+
+# Utilities
+python-dateutil>=2.8.2
+
+# Optional: Self-Hosted Whisper (uncomment if needed)
+# openai-whisper>=20231117
+# torch>=2.1.0
+# torchaudio>=2.1.0

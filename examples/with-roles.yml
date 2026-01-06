@@ -1,0 +1,36 @@
+---
+# ============================================================================
+# with-roles.yml - Beispiel-Playbook mit Rollen
+# ============================================================================
+# Dieses Playbook zeigt, wie Rollen verwendet werden.
+# Rollen sollten im roles/-Verzeichnis abgelegt werden.
+
+- name: Playbook mit Rollen
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  
+  roles:
+    # Beispiel-Rollen (müssen im roles/-Verzeichnis existieren)
+    # - common
+    # - webserver
+    # - database
+  
+  tasks:
+    - name: Zeige Informationen
+      debug:
+        msg: |
+          Rollen können verwendet werden, um komplexe Konfigurationen
+          zu organisieren und wiederzuverwenden.
+          
+          Struktur:
+          roles/
+          ├── common/
+          │   ├── tasks/
+          │   ├── handlers/
+          │   ├── vars/
+          │   └── defaults/
+          └── webserver/
+              ├── tasks/
+              ├── handlers/
+              └── templates/

@@ -1,0 +1,129 @@
+---
+# ============================================================================
+# docker-compose.yml - Ansible Test Controller (v2.0)
+# ============================================================================
+# Orchestriert einen Ansible-Test-Controller für lokale Entwicklung und CI/CD.
+# Alle Konfigurationen können über .env überschrieben werden.
+
+
+services:
+  # ============================================================================
+  # Service: ansible-controller
+  # ============================================================================
+  # Der Hauptservice für Ansible-Playbook-Ausführung und -Validierung
+  
+  ansible-controller:
+    # ========================================================================
+    # Build-Konfiguration
+    # ========================================================================
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - UBUNTU_VERSION=22.04
+        - ANSIBLE_VERSION=2.12
+        - PYTHON_VERSION=3
+    
+    # ========================================================================
+    # Container-Name und Image
+    # ========================================================================
+    container_name: ${COMPOSE_PROJECT_NAME:-ansible-controller}
+    image: ${COMPOSE_PROJECT_NAME:-ansible-controller}:${DOCKER_TAG:-latest}
+    
+    # ========================================================================
+    # Umgebungsvariablen (aus .env laden)
+    # ========================================================================
+    environment:
+      # Ansible-Konfiguration
+      - ANSIBLE_HOST_KEY_CHECKING=${ANSIBLE_HOST_KEY_CHECKING:-False}
+      - ANSIBLE_FORCE_COLOR=1
+      - ANSIBLE_INVENTORY=${ANSIBLE_INVENTORY:-./inventory}
+      - ANSIBLE_ROLES_PATH=${ANSIBLE_ROLES_PATH:-./roles}
+      - ANSIBLE_LIBRARY=${ANSIBLE_LIBRARY:-./library}
+      - ANSIBLE_LOOKUP_PLUGINS=${ANSIBLE_LOOKUP_PLUGINS:-./lookup_plugins}
+      - ANSIBLE_FORKS=${ANSIBLE_FORKS:-5}
+      - ANSIBLE_TIMEOUT=${ANSIBLE_TIMEOUT:-10}
+      - ANSIBLE_VERBOSITY=${ANSIBLE_VERBOSITY:-0}
+      
+      # Python-Konfiguration
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      
+      # SSH-Konfiguration
+      - SSH_USER=${SSH_USER:-ubuntu}
+      - SSH_PORT=${SSH_PORT:-22}
+      - SSH_TIMEOUT=${SSH_TIMEOUT:-10}
+      
+      # Vault-Konfiguration (optional)
+      # - ANSIBLE_VAULT_PASSWORD_FILE=${ANSIBLE_VAULT_PASSWORD_FILE:-}
+      
+      # Proxy-Konfiguration (optional)
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
+      - NO_PROXY=${NO_PROXY:-localhost,127.0.0.1}
+      
+      # Debugging
+      - DEBUG=${DEBUG:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    
+    # ========================================================================
+    # Volume-Mounts
+    # ========================================================================
+    volumes:
+      # Gesamtes Projekt-Root mounten (rw = read-write)
+      - ..:/project:rw
+      
+      # SSH-Keys mounten (ro = read-only für Sicherheit)
+      - ${SSH_KEY_PATH:-.ssh}:/root/.ssh:ro
+      
+      # Ansible-Cache (für schnellere Wiederholungen)
+      - ansible-cache:/tmp/ansible_facts
+      
+      # Logs persistieren
+      - ./logs:/project/controller/logs:rw
+    
+    # ========================================================================
+    # TTY und Interaktivität
+    # ========================================================================
+    tty: true
+    stdin_open: true
+    
+    # ========================================================================
+    # Netzwerk-Konfiguration
+    # ========================================================================
+    networks:
+      - ansible-network
+    
+    # ========================================================================
+    # Restart-Policy
+    # ========================================================================
+    restart: no
+    
+    # ========================================================================
+    # Logging
+    # ========================================================================
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # ========================================================================
+    # Working Directory
+    # ========================================================================
+    working_dir: /project
+
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  ansible-cache:
+    driver: local
+
+# ============================================================================
+# Netzwerke
+# ============================================================================
+networks:
+  ansible-network:
+    driver: bridge
+    name: ansible-network
