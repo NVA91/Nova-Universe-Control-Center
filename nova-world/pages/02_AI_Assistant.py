@@ -1,10 +1,21 @@
 """
-🤖 Nova's AI Assistant
-Context-Aware DevOps Assistant
+Nova-World Dashboard - AI Assistant
+Powered by Ollama (Self-Hosted)
 """
 
 import streamlit as st
-from datetime import datetime
+import sys
+from pathlib import Path
+import psutil
+
+# Add components to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from components.ai_assistant_ollama import get_ai_assistant
+
+# ═══════════════════════════════════════════════════════════
+# PAGE CONFIG
+# ═══════════════════════════════════════════════════════════
 
 st.set_page_config(
     page_title="AI Assistant",
@@ -13,233 +24,257 @@ st.set_page_config(
 )
 
 # ═══════════════════════════════════════════════════════════
-# 🎨 HEADER
+# HELPER FUNCTIONS
 # ═══════════════════════════════════════════════════════════
 
-st.title("🤖 Nova AI Assistant")
-st.caption("Dein intelligenter DevOps-Helfer")
-
-# ═══════════════════════════════════════════════════════════
-# 📋 INFO
-# ═══════════════════════════════════════════════════════════
-
-with st.expander("ℹ️ Was kann der AI Assistant?"):
-    st.markdown("""
-    **Nova AI Assistant** ist dein intelligenter Helfer für DevOps-Tasks!
-    
-    **Features:**
-    - 🧠 **Context-Aware**: Kennt deinen System-Status
-    - 💡 **Smart Suggestions**: Schlägt passende Quick Actions vor
-    - 🔍 **Error Analysis**: Analysiert Logs und gibt Tipps
-    - 📚 **Knowledge Base**: Weiß über Docker, Ansible, Semaphore Bescheid
-    
-    **Beispiel-Fragen:**
-    - "Was läuft gerade auf meinem System?"
-    - "Warum ist mein Container gestoppt?"
-    - "Wie deploye ich das Standard-Profil?"
-    - "Was bedeutet dieser Fehler in den Logs?"
-    - "Führe einen Health Check durch"
-    
-    **Technologie:**
-    - 🤖 OpenAI GPT-4
-    - 🎯 Quick Actions Integration
-    - 📊 System-Context-Awareness
-    """)
-
-st.divider()
-
-# ═══════════════════════════════════════════════════════════
-# 💬 CHAT INTERFACE
-# ═══════════════════════════════════════════════════════════
-
-# Initialize chat history
-if "ai_chat_history" not in st.session_state:
-    st.session_state.ai_chat_history = []
-
-if "ai_messages" not in st.session_state:
-    st.session_state.ai_messages = [
-        {
-            "role": "assistant",
-            "content": "👋 Hi! Ich bin Nova, dein AI Assistant. Wie kann ich dir helfen?"
-        }
-    ]
-
-# Display chat messages
-for message in st.session_state.ai_messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# Chat input
-if prompt := st.chat_input("Frag mich was..."):
-    # Add user message
-    st.session_state.ai_messages.append({"role": "user", "content": prompt})
-    
-    with st.chat_message("user"):
-        st.markdown(prompt)
-    
-    # Get AI response
-    with st.chat_message("assistant"):
-        with st.spinner("🤔 Denke nach..."):
-            from components.ai_assistant import get_ai_assistant
-            
-            ai = get_ai_assistant()
-            
-            # Get system context
-            system_context = ai.get_system_context()
-            
-            # Chat with AI
-            response = ai.chat(
-                user_message=prompt,
-                chat_history=st.session_state.ai_chat_history[-10:],  # Last 10 messages
-                system_context=system_context
-            )
-            
-            st.markdown(response)
-            
-            # Check for action suggestions
-            actions = ai.extract_action_suggestions(response)
-            
-            if actions:
-                st.divider()
-                st.markdown("**💡 Vorgeschlagene Actions:**")
-                
-                for action in actions:
-                    if st.button(f"▶️ {action}", key=f"action_{action}"):
-                        from components.quick_actions import get_quick_actions
-                        
-                        qa = get_quick_actions()
-                        
-                        # Execute action
-                        with st.spinner(f"Führe {action} aus..."):
-                            # Map action name to function
-                            action_func = getattr(qa, action, None)
-                            
-                            if action_func:
-                                result = action_func()
-                                
-                                if result.get("success"):
-                                    st.success(result.get("message", "✅ Erfolgreich!"))
-                                else:
-                                    st.error(f"❌ {result.get('error')}")
-                            else:
-                                st.error(f"Action '{action}' nicht gefunden")
-    
-    # Add assistant message
-    st.session_state.ai_messages.append({"role": "assistant", "content": response})
-    
-    # Update chat history for API
-    st.session_state.ai_chat_history.append({"role": "user", "content": prompt})
-    st.session_state.ai_chat_history.append({"role": "assistant", "content": response})
-
-st.divider()
-
-# ═══════════════════════════════════════════════════════════
-# 📊 SYSTEM CONTEXT (Sidebar)
-# ═══════════════════════════════════════════════════════════
-
-with st.sidebar:
-    st.markdown("### 📊 System Context")
-    
+def get_system_info() -> dict:
+    """Get current system information"""
     try:
-        from components.ai_assistant import get_ai_assistant
+        return {
+            "cpu": round(psutil.cpu_percent(interval=1), 1),
+            "memory": round(psutil.virtual_memory().percent, 1),
+            "disk": round(psutil.disk_usage('/').percent, 1)
+        }
+    except:
+        return {}
+
+# ═══════════════════════════════════════════════════════════
+# MAIN APP
+# ═══════════════════════════════════════════════════════════
+
+st.title("🤖 AI Assistant")
+st.markdown("**Nova** - Your Infrastructure AI Helper (Powered by Ollama)")
+
+# Initialize AI Assistant
+ai = get_ai_assistant()
+
+# Check availability
+if not ai.is_available():
+    st.error("❌ Ollama nicht verfügbar!")
+    st.info("""
+    **Ollama Setup:**
+    1. Ollama installieren: `curl -fsSL https://ollama.com/install.sh | sh`
+    2. Model herunterladen: `ollama pull llama3:8b`
+    3. `[ollama]` in `secrets.toml` aktivieren
+    """)
+    st.stop()
+
+st.success(f"✅ Ollama verfügbar - Model: {ai.model}")
+
+# ═══════════════════════════════════════════════════════════
+# TABS
+# ═══════════════════════════════════════════════════════════
+
+tab1, tab2, tab3 = st.tabs(["💬 Chat", "💡 Suggestions", "ℹ️ Info"])
+
+# ───────────────────────────────────────────────────────────
+# TAB 1: CHAT
+# ───────────────────────────────────────────────────────────
+
+with tab1:
+    st.subheader("Chat with Nova")
+    
+    # Initialize conversation history
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    
+    # Display chat history
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+    
+    # Chat input
+    if prompt := st.chat_input("Frage Nova..."):
+        # Add user message
+        st.session_state.messages.append({"role": "user", "content": prompt})
         
-        ai = get_ai_assistant()
-        context = ai.get_system_context()
+        with st.chat_message("user"):
+            st.markdown(prompt)
         
-        if "error" not in context:
-            # CPU
-            cpu_color = "🟢" if context["cpu"] < 70 else "🟡" if context["cpu"] < 90 else "🔴"
-            st.metric("CPU", f"{context['cpu']}%", delta=None)
-            
-            # RAM
-            ram_color = "🟢" if context["ram"] < 70 else "🟡" if context["ram"] < 90 else "🔴"
-            st.metric("RAM", f"{context['ram']}%", delta=None)
-            
-            # Disk
-            disk_color = "🟢" if context["disk"] < 70 else "🟡" if context["disk"] < 90 else "🔴"
-            st.metric("Disk", f"{context['disk']}%", delta=None)
-            
-            st.divider()
-            
-            # Docker
-            docker = context.get("docker", {})
-            st.metric(
-                "🐳 Docker",
-                f"{docker.get('running', 0)}/{docker.get('total', 0)}",
-                delta=f"{docker.get('stopped', 0)} stopped"
-            )
-            
-            # Semaphore
-            semaphore_status = context.get("semaphore", "unknown")
-            status_emoji = "🟢" if semaphore_status == "online" else "🔴"
-            st.metric("🚀 Semaphore", f"{status_emoji} {semaphore_status}")
-        
-        else:
-            st.error(f"Fehler: {context['error']}")
+        # Get AI response
+        with st.chat_message("assistant"):
+            with st.spinner("Nova denkt nach..."):
+                system_info = get_system_info()
+                
+                response = ai.chat(
+                    message=prompt,
+                    conversation_history=st.session_state.messages[:-1],
+                    system_info=system_info
+                )
+                
+                if response["success"]:
+                    st.markdown(response["message"])
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": response["message"]
+                    })
+                else:
+                    st.error(response["message"])
     
-    except Exception as e:
-        st.error(f"Context-Fehler: {e}")
-    
-    st.divider()
-    
-    st.markdown("### 🤖 AI Info")
-    st.caption("Model: GPT-4")
-    st.caption("Context: System-Aware")
-    
-    if st.session_state.ai_messages:
-        st.metric("Messages", len(st.session_state.ai_messages))
-    
-    st.divider()
-    
-    # Clear Chat
-    if st.button("🗑️ Chat löschen", use_container_width=True):
-        st.session_state.ai_messages = [
-            {
-                "role": "assistant",
-                "content": "👋 Chat wurde gelöscht. Wie kann ich dir helfen?"
-            }
-        ]
-        st.session_state.ai_chat_history = []
+    # Clear chat button
+    if st.button("🗑️ Chat löschen"):
+        st.session_state.messages = []
         st.rerun()
-    
-    st.divider()
-    
-    st.markdown("### 🔙 Navigation")
-    st.page_link("nova_universe.py", label="🏠 Home")
-    st.page_link("pages/01_🏠_Home.py", label="📊 Dashboard")
 
-# ═══════════════════════════════════════════════════════════
-# 💡 QUICK EXAMPLES
-# ═══════════════════════════════════════════════════════════
+# ───────────────────────────────────────────────────────────
+# TAB 2: INTELLIGENT SUGGESTIONS
+# ───────────────────────────────────────────────────────────
 
-with st.expander("💡 Beispiel-Fragen"):
+with tab2:
+    st.subheader("💡 Intelligente Vorschläge")
+    
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("""
-        **📊 System & Status:**
-        - "Was läuft gerade?"
-        - "Wie ist der System-Status?"
-        - "Zeige mir die Container"
-        - "Gibt es Fehler in den Logs?"
+        st.markdown("### 🐳 Docker")
+        if st.button("Docker-Empfehlung", use_container_width=True):
+            with st.spinner("Analysiere Docker-Status..."):
+                system_info = get_system_info()
+                response = ai.get_suggestion("docker", system_info)
+                
+                if response["success"]:
+                    st.success("Empfehlung:")
+                    st.markdown(response["message"])
+                else:
+                    st.error(response["message"])
         
-        **🐳 Docker:**
-        - "Starte alle Container"
-        - "Warum ist Container X gestoppt?"
-        - "Räume Docker auf"
-        - "Restart alle Container"
-        """)
+        st.markdown("### 🚀 Deployment")
+        if st.button("Deployment-Empfehlung", use_container_width=True):
+            with st.spinner("Analysiere System..."):
+                system_info = get_system_info()
+                response = ai.get_suggestion("deployment", system_info)
+                
+                if response["success"]:
+                    st.success("Empfehlung:")
+                    st.markdown(response["message"])
+                else:
+                    st.error(response["message"])
     
     with col2:
-        st.markdown("""
-        **🚀 Deployments:**
-        - "Deploye das Standard-Profil"
-        - "Was ist der Deployment-Status?"
-        - "Wie deploye ich minimal?"
+        st.markdown("### 🔧 System")
+        if st.button("System-Optimierung", use_container_width=True):
+            with st.spinner("Analysiere System-Metriken..."):
+                system_info = get_system_info()
+                response = ai.get_suggestion("system", system_info)
+                
+                if response["success"]:
+                    st.success("Empfehlung:")
+                    st.markdown(response["message"])
+                else:
+                    st.error(response["message"])
         
-        **💡 Hilfe:**
-        - "Was kann ich hier machen?"
-        - "Erkläre mir Quick Actions"
-        - "Was bedeutet dieser Fehler?"
-        - "Gib mir Tipps für Optimierung"
-        """)
+        st.markdown("### 💾 Backup")
+        if st.button("Backup-Empfehlung", use_container_width=True):
+            with st.spinner("Prüfe Backup-Status..."):
+                system_info = get_system_info()
+                response = ai.get_suggestion("backup", system_info)
+                
+                if response["success"]:
+                    st.success("Empfehlung:")
+                    st.markdown(response["message"])
+                else:
+                    st.error(response["message"])
+    
+    # Quick Actions Erklärungen
+    st.divider()
+    st.markdown("### ⚡ Quick Actions Erklärer")
+    
+    action = st.selectbox(
+        "Wähle eine Quick Action:",
+        [
+            "Deploy Minimal",
+            "Deploy Standard",
+            "Deploy Full",
+            "Docker Start All",
+            "Docker Stop All",
+            "Docker Cleanup",
+            "System Health Check"
+        ]
+    )
+    
+    if st.button("🤔 Was macht diese Action?", use_container_width=True):
+        with st.spinner("Erkläre Action..."):
+            response = ai.explain_action(action)
+            
+            if response["success"]:
+                st.info(response["message"])
+            else:
+                st.error(response["message"])
+
+# ───────────────────────────────────────────────────────────
+# TAB 3: INFO
+# ───────────────────────────────────────────────────────────
+
+with tab3:
+    st.subheader("ℹ️ AI Assistant Info")
+    
+    st.markdown(f"""
+    ### 🤖 Nova AI Assistant
+    
+    **Model:** {ai.model}  
+    **Engine:** Ollama (Self-Hosted)  
+    **Temperature:** {ai.temperature}  
+    **API:** {ai.api_url}
+    
+    ### ✨ Features
+    
+    - 💬 **Chat Interface** - Stelle Fragen zu deiner Infrastruktur
+    - 💡 **Intelligente Vorschläge** - Context-aware Empfehlungen
+    - 🎯 **Quick Actions Hilfe** - Erklärt was Actions machen
+    - 📊 **System-Kontext** - Nutzt aktuelle System-Metriken
+    - 🔒 **100% Lokal** - Keine Cloud, keine Kosten (0€/Monat)
+    
+    ### 🎯 Use Cases
+    
+    **Frage Nova:**
+    - "Welche Container laufen gerade?"
+    - "Soll ich Deploy Standard oder Full wählen?"
+    - "Warum ist die CPU so hoch?"
+    - "Wie mache ich ein Backup?"
+    - "Was macht Docker Cleanup?"
+    
+    ### 🔧 Configuration
+    
+    In `.streamlit/secrets.toml`:
+    ```toml
+    [ollama]
+    enabled = true
+    api_url = "http://localhost:11434"
+    model = "llama3:8b"
+    temperature = 0.7
+    ```
+    """)
+    
+    # System Info
+    st.divider()
+    st.markdown("### 📊 Aktuelle System-Info")
+    
+    system_info = get_system_info()
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("CPU", f"{system_info.get('cpu', 0)}%")
+    
+    with col2:
+        st.metric("RAM", f"{system_info.get('memory', 0)}%")
+    
+    with col3:
+        st.metric("Disk", f"{system_info.get('disk', 0)}%")
+
+# ═══════════════════════════════════════════════════════════
+# SIDEBAR
+# ═══════════════════════════════════════════════════════════
+
+with st.sidebar:
+    st.divider()
+    
+    st.markdown("### 🤖 AI Status")
+    
+    if ai.is_available():
+        st.success("✅ Online")
+        st.info(f"Model: {ai.model}")
+    else:
+        st.error("❌ Offline")
+    
+    st.metric("Messages", len(st.session_state.get("messages", [])))
