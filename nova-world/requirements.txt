@@ -35,3 +35,6 @@ python-dateutil>=2.8.2
 # openai-whisper>=20231117
 # torch>=2.1.0
 # torchaudio>=2.1.0
+webauthn>=2.0.0
+pyjwt>=2.8.0
+qrcode[pil]>=7.4.0

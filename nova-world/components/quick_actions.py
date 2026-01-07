@@ -1,6 +1,7 @@
 """
 ⚡ Nova's Quick Actions
 One-Click Power-Buttons für häufige Tasks
+Includes: Docker, Deployment (Semaphore), System, Workflows
 """
 
 import streamlit as st
@@ -10,457 +11,385 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 import psutil
 from components.secrets_manager import get_secrets_manager
+from components.semaphore_api import SemaphoreAPI, SemaphoreAPIError, create_semaphore_client
 
 class QuickActions:
     """
     Vordefinierte Actions für häufige Tasks
     One-Click Execution!
     """
-    
+
     def __init__(self):
         secrets = get_secrets_manager()
         self.semaphore_url = secrets.get_semaphore_url()
         self.semaphore_token = secrets.get_semaphore_token()
         self.semaphore_project_id = secrets.get_semaphore_project_id()
         self.ansible_project_path = secrets.get_ansible_project_path()
-    
+        
+        # Initialize Semaphore API client
+        self.semaphore_client = None
+        if self.semaphore_url and self.semaphore_token:
+            try:
+                self.semaphore_client = create_semaphore_client()
+            except Exception as e:
+                st.warning(f"Semaphore API nicht verfügbar: {e}")
+
+    # ═══════════════════════════════════════════════════════════
+    # 🚀 SEMAPHORE DEPLOYMENT ACTIONS
+    # ═══════════════════════════════════════════════════════════
+
+    def deploy_minimal(self) -> Dict[str, Any]:
+        """Deploy minimal profile via Semaphore"""
+        return self._execute_semaphore_deploy("Deploy Minimal Profile")
+
+    def deploy_standard(self) -> Dict[str, Any]:
+        """Deploy standard profile via Semaphore"""
+        return self._execute_semaphore_deploy("Deploy Standard Profile")
+
+    def deploy_full(self) -> Dict[str, Any]:
+        """Deploy full profile via Semaphore"""
+        return self._execute_semaphore_deploy("Deploy Full Profile")
+
+    def _execute_semaphore_deploy(self, template_name: str) -> Dict[str, Any]:
+        """Execute deployment via Semaphore API"""
+        if not self.semaphore_client:
+            return {
+                "success": False,
+                "message": "❌ Semaphore API nicht konfiguriert",
+                "timestamp": datetime.now().isoformat()
+            }
+
+        try:
+            # Get template
+            templates = self.semaphore_client.get_templates(self.semaphore_project_id)
+            template = next((t for t in templates if t['name'] == template_name), None)
+            
+            if not template:
+                return {
+                    "success": False,
+                    "message": f"❌ Template '{template_name}' nicht gefunden",
+                    "timestamp": datetime.now().isoformat()
+                }
+
+            # Execute task
+            task = self.semaphore_client.execute_template(
+                self.semaphore_project_id,
+                template['id']
+            )
+
+            return {
+                "success": True,
+                "message": f"✅ Deployment gestartet: {template_name}",
+                "task_id": task.get('id'),
+                "timestamp": datetime.now().isoformat()
+            }
+
+        except SemaphoreAPIError as e:
+            return {
+                "success": False,
+                "message": f"❌ Semaphore API Error: {e}",
+                "timestamp": datetime.now().isoformat()
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"❌ Fehler: {e}",
+                "timestamp": datetime.now().isoformat()
+            }
+
+    def get_deployment_status(self) -> Dict[str, Any]:
+        """Get current deployment status from Semaphore"""
+        if not self.semaphore_client:
+            return {"status": "unavailable", "message": "Semaphore API nicht verfügbar"}
+
+        try:
+            # Get last 5 tasks
+            tasks = self.semaphore_client.get_tasks(
+                self.semaphore_project_id,
+                limit=5
+            )
+
+            if not tasks:
+                return {"status": "idle", "message": "Keine aktiven Deployments"}
+
+            # Check if any running
+            running = [t for t in tasks if t.get('status') == 'running']
+            if running:
+                return {
+                    "status": "running",
+                    "message": f"Deployment läuft: {running[0].get('template_name')}",
+                    "task_id": running[0].get('id')
+                }
+
+            # Get last completed
+            last = tasks[0]
+            if last.get('status') == 'success':
+                return {
+                    "status": "success",
+                    "message": f"✅ Letztes Deployment: {last.get('template_name')}",
+                    "task_id": last.get('id')
+                }
+            else:
+                return {
+                    "status": "failed",
+                    "message": f"❌ Letztes Deployment fehlgeschlagen",
+                    "task_id": last.get('id')
+                }
+
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
     # ═══════════════════════════════════════════════════════════
     # 🐳 DOCKER QUICK ACTIONS
     # ═══════════════════════════════════════════════════════════
-    
-    def docker_start_all(self) -> Dict:
-        """Startet alle gestoppten Container"""
+
+    def docker_start_all(self) -> Dict[str, Any]:
+        """Start all Docker containers"""
         try:
             result = subprocess.run(
-                ["docker", "ps", "-a", "--filter", "status=exited", "--format", "{{.Names}}"],
+                ["docker", "start", "$(docker ps -aq)"],
                 capture_output=True,
                 text=True,
-                timeout=10
-            )
-            
-            if result.returncode != 0:
-                return {"success": False, "error": result.stderr}
-            
-            stopped_containers = result.stdout.strip().split('\n')
-            stopped_containers = [c for c in stopped_containers if c]  # Remove empty
-            
-            if not stopped_containers:
-                return {
-                    "success": True,
-                    "message": "Keine gestoppten Container gefunden",
-                    "started": []
-                }
-            
-            # Start all
-            started = []
-            for container in stopped_containers:
-                start_result = subprocess.run(
-                    ["docker", "start", container],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
-                if start_result.returncode == 0:
-                    started.append(container)
-            
-            return {
-                "success": True,
-                "message": f"{len(started)} Container gestartet",
-                "started": started
-            }
-        
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-    
-    def docker_stop_all(self) -> Dict:
-        """Stoppt alle laufenden Container (GEFÄHRLICH!)"""
-        try:
-            result = subprocess.run(
-                ["docker", "ps", "--format", "{{.Names}}"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            
-            if result.returncode != 0:
-                return {"success": False, "error": result.stderr}
-            
-            running_containers = result.stdout.strip().split('\n')
-            running_containers = [c for c in running_containers if c]
-            
-            if not running_containers:
-                return {
-                    "success": True,
-                    "message": "Keine laufenden Container",
-                    "stopped": []
-                }
-            
-            # Stop all
-            stopped = []
-            for container in running_containers:
-                stop_result = subprocess.run(
-                    ["docker", "stop", container],
-                    capture_output=True,
-                    text=True,
-                    timeout=10
-                )
-                if stop_result.returncode == 0:
-                    stopped.append(container)
-            
-            return {
-                "success": True,
-                "message": f"{len(stopped)} Container gestoppt",
-                "stopped": stopped
-            }
-        
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-    
-    def docker_restart_all(self) -> Dict:
-        """Restart aller laufenden Container"""
-        try:
-            result = subprocess.run(
-                ["docker", "ps", "--format", "{{.Names}}"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            
-            running_containers = result.stdout.strip().split('\n')
-            running_containers = [c for c in running_containers if c]
-            
-            restarted = []
-            for container in running_containers:
-                restart_result = subprocess.run(
-                    ["docker", "restart", container],
-                    capture_output=True,
-                    text=True,
-                    timeout=10
-                )
-                if restart_result.returncode == 0:
-                    restarted.append(container)
-            
-            return {
-                "success": True,
-                "message": f"{len(restarted)} Container neugestartet",
-                "restarted": restarted
-            }
-        
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-    
-    def docker_cleanup(self) -> Dict:
-        """Räumt auf: dangling images, stopped containers, unused volumes"""
-        try:
-            # Prune system
-            result = subprocess.run(
-                ["docker", "system", "prune", "-f"],
-                capture_output=True,
-                text=True,
-                timeout=30
+                shell=True
             )
             
             return {
                 "success": result.returncode == 0,
-                "message": "Docker cleanup durchgeführt",
-                "output": result.stdout
+                "message": "✅ All containers started" if result.returncode == 0 else "❌ Failed to start containers",
+                "output": result.stdout,
+                "timestamp": datetime.now().isoformat()
             }
-        
         except Exception as e:
-            return {"success": False, "error": str(e)}
-    
-    def docker_status_check(self) -> Dict:
-        """Quick Status Check aller Container"""
+            return {
+                "success": False,
+                "message": f"❌ Error: {str(e)}",
+                "timestamp": datetime.now().isoformat()
+            }
+
+    def docker_stop_all(self) -> Dict[str, Any]:
+        """Stop all Docker containers"""
         try:
-            # Running containers
-            running_result = subprocess.run(
-                ["docker", "ps", "--format", "{{.Names}}"],
+            result = subprocess.run(
+                ["docker", "stop", "$(docker ps -q)"],
                 capture_output=True,
                 text=True,
-                timeout=10
+                shell=True
             )
             
-            # All containers
-            all_result = subprocess.run(
-                ["docker", "ps", "-a", "--format", "{{.Names}}"],
+            return {
+                "success": result.returncode == 0,
+                "message": "✅ All containers stopped" if result.returncode == 0 else "❌ Failed to stop containers",
+                "output": result.stdout,
+                "timestamp": datetime.now().isoformat()
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"❌ Error: {str(e)}",
+                "timestamp": datetime.now().isoformat()
+            }
+
+    def docker_restart_all(self) -> Dict[str, Any]:
+        """Restart all Docker containers"""
+        try:
+            result = subprocess.run(
+                ["docker", "restart", "$(docker ps -q)"],
                 capture_output=True,
                 text=True,
-                timeout=10
+                shell=True
             )
             
-            # Stopped containers
-            stopped_result = subprocess.run(
-                ["docker", "ps", "-a", "--filter", "status=exited", "--format", "{{.Names}}"],
+            return {
+                "success": result.returncode == 0,
+                "message": "✅ All containers restarted" if result.returncode == 0 else "❌ Failed to restart containers",
+                "output": result.stdout,
+                "timestamp": datetime.now().isoformat()
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"❌ Error: {str(e)}",
+                "timestamp": datetime.now().isoformat()
+            }
+
+    def docker_cleanup(self) -> Dict[str, Any]:
+        """Clean up Docker (unused containers, images, volumes)"""
+        try:
+            result = subprocess.run(
+                ["docker", "system", "prune", "-af", "--volumes"],
                 capture_output=True,
-                text=True,
-                timeout=10
+                text=True
             )
             
-            running = [c for c in running_result.stdout.strip().split('\n') if c]
-            all_containers = [c for c in all_result.stdout.strip().split('\n') if c]
-            stopped = [c for c in stopped_result.stdout.strip().split('\n') if c]
+            return {
+                "success": result.returncode == 0,
+                "message": "✅ Docker cleanup complete" if result.returncode == 0 else "❌ Cleanup failed",
+                "output": result.stdout,
+                "timestamp": datetime.now().isoformat()
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"❌ Error: {str(e)}",
+                "timestamp": datetime.now().isoformat()
+            }
+
+    # ═══════════════════════════════════════════════════════════
+    # 🔧 SYSTEM QUICK ACTIONS
+    # ═══════════════════════════════════════════════════════════
+
+    def system_health_check(self) -> Dict[str, Any]:
+        """Quick system health check"""
+        try:
+            cpu_percent = psutil.cpu_percent(interval=1)
+            memory = psutil.virtual_memory()
+            disk = psutil.disk_usage('/')
+            
+            health = "✅ Healthy"
+            if cpu_percent > 80 or memory.percent > 85 or disk.percent > 90:
+                health = "⚠️ Warning"
+            if cpu_percent > 95 or memory.percent > 95 or disk.percent > 95:
+                health = "❌ Critical"
             
             return {
                 "success": True,
-                "running": len(running),
-                "total": len(all_containers),
-                "stopped": len(stopped),
-                "containers": {
-                    "running": running,
-                    "stopped": stopped
-                }
+                "message": health,
+                "details": {
+                    "cpu": f"{cpu_percent}%",
+                    "memory": f"{memory.percent}%",
+                    "disk": f"{disk.percent}%"
+                },
+                "timestamp": datetime.now().isoformat()
             }
-        
         except Exception as e:
-            return {"success": False, "error": str(e)}
-    
-    # ═══════════════════════════════════════════════════════════
-    # 🚀 SEMAPHORE QUICK ACTIONS
-    # ═══════════════════════════════════════════════════════════
-    
-    def semaphore_deploy_minimal(self) -> Dict:
-        """Triggert Minimal Profile Deployment"""
-        return self._semaphore_trigger_task("Deploy Minimal Profile")
-    
-    def semaphore_deploy_standard(self) -> Dict:
-        """Triggert Standard Profile Deployment"""
-        return self._semaphore_trigger_task("Deploy Standard Profile")
-    
-    def semaphore_deploy_full(self) -> Dict:
-        """Triggert Full Profile Deployment"""
-        return self._semaphore_trigger_task("Deploy Full Profile")
-    
-    def semaphore_status(self) -> Dict:
-        """Holt Semaphore Status"""
+            return {
+                "success": False,
+                "message": f"❌ Error: {str(e)}",
+                "timestamp": datetime.now().isoformat()
+            }
+
+    def check_errors(self) -> Dict[str, Any]:
+        """Check system logs for errors"""
         try:
-            response = requests.get(
-                f"{self.semaphore_url}/api/ping",
-                timeout=5
+            # Check Docker logs
+            result = subprocess.run(
+                ["docker", "ps", "--filter", "health=unhealthy", "--format", "{{.Names}}"],
+                capture_output=True,
+                text=True
             )
             
-            if response.status_code == 200:
+            unhealthy = result.stdout.strip().split('
+') if result.stdout.strip() else []
+            
+            if unhealthy and unhealthy[0]:
                 return {
-                    "success": True,
-                    "status": "online",
-                    "message": "Semaphore ist erreichbar"
+                    "success": False,
+                    "message": f"⚠️ {len(unhealthy)} unhealthy containers",
+                    "details": unhealthy,
+                    "timestamp": datetime.now().isoformat()
                 }
             else:
                 return {
-                    "success": False,
-                    "status": "error",
-                    "message": f"HTTP {response.status_code}"
+                    "success": True,
+                    "message": "✅ No errors found",
+                    "timestamp": datetime.now().isoformat()
                 }
-        
-        except requests.exceptions.ConnectionError:
+        except Exception as e:
             return {
                 "success": False,
-                "status": "offline",
-                "message": "Semaphore nicht erreichbar"
+                "message": f"❌ Error: {str(e)}",
+                "timestamp": datetime.now().isoformat()
             }
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-    
-    def _semaphore_trigger_task(self, task_name: str) -> Dict:
-        """
-        Interner Helper: Triggert Semaphore Task
-        
-        Args:
-            task_name: Name des Task Templates
-        
-        Returns:
-            Result Dict
-        """
-        try:
-            # Check if Semaphore is reachable
-            status = self.semaphore_status()
-            if not status.get("success"):
-                return {
-                    "success": False,
-                    "error": "Semaphore nicht erreichbar",
-                    "details": status
-                }
-            
-            # TODO: Implement actual Semaphore API call
-            # For now, return mock response
-            return {
-                "success": True,
-                "message": f"Deployment '{task_name}' würde getriggert",
-                "task": task_name,
-                "note": "API-Integration noch nicht implementiert"
-            }
-        
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-    
-    # ═══════════════════════════════════════════════════════════
-    # 💻 SYSTEM QUICK ACTIONS
-    # ═══════════════════════════════════════════════════════════
-    
-    def system_health_quick(self) -> Dict:
-        """Quick System Health Check"""
-        try:
-            cpu = psutil.cpu_percent(interval=1)
-            mem = psutil.virtual_memory()
-            disk = psutil.disk_usage('/')
-            
-            # Determine overall health
-            warnings = []
-            if cpu > 80:
-                warnings.append("CPU usage high")
-            if mem.percent > 80:
-                warnings.append("RAM usage high")
-            if disk.percent > 80:
-                warnings.append("Disk usage high")
-            
-            overall = "healthy" if not warnings else "warning"
-            
-            return {
-                "success": True,
-                "overall": overall,
-                "warnings": warnings,
-                "cpu": {
-                    "percent": cpu,
-                    "status": "🟢 OK" if cpu < 70 else "🟡 High" if cpu < 90 else "🔴 Critical"
-                },
-                "ram": {
-                    "percent": mem.percent,
-                    "used_gb": round(mem.used / (1024**3), 1),
-                    "total_gb": round(mem.total / (1024**3), 1),
-                    "status": "🟢 OK" if mem.percent < 70 else "🟡 High" if mem.percent < 90 else "🔴 Critical"
-                },
-                "disk": {
-                    "percent": disk.percent,
-                    "free_gb": round(disk.free / (1024**3), 1),
-                    "total_gb": round(disk.total / (1024**3), 1),
-                    "status": "🟢 OK" if disk.percent < 70 else "🟡 High" if disk.percent < 90 else "🔴 Critical"
-                }
-            }
-        
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-    
-    def system_uptime(self) -> Dict:
-        """System Uptime"""
-        try:
-            boot_time = psutil.boot_time()
-            uptime_seconds = datetime.now().timestamp() - boot_time
-            
-            days = int(uptime_seconds // 86400)
-            hours = int((uptime_seconds % 86400) // 3600)
-            minutes = int((uptime_seconds % 3600) // 60)
-            
-            uptime_formatted = f"{days}d {hours}h {minutes}m"
-            
-            return {
-                "success": True,
-                "uptime_seconds": uptime_seconds,
-                "uptime_formatted": uptime_formatted,
-                "boot_time": datetime.fromtimestamp(boot_time).strftime("%Y-%m-%d %H:%M:%S")
-            }
-        
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-    
-    def logs_recent_errors(self) -> Dict:
-        """Sucht nach recent errors in Docker logs"""
-        try:
-            # Get running containers
-            result = subprocess.run(
-                ["docker", "ps", "--format", "{{.Names}}"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            
-            containers = [c for c in result.stdout.strip().split('\n') if c]
-            
-            errors = []
-            for container in containers[:5]:  # Limit to 5 containers
-                # Get last 50 lines of logs
-                logs_result = subprocess.run(
-                    ["docker", "logs", "--tail", "50", container],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
-                
-                # Search for error keywords
-                for line in logs_result.stderr.split('\n'):
-                    if any(keyword in line.lower() for keyword in ['error', 'fatal', 'exception', 'failed']):
-                        errors.append({
-                            "container": container,
-                            "line": line.strip()
-                        })
-            
-            return {
-                "success": True,
-                "errors_count": len(errors),
-                "errors": errors[:10]  # Limit to 10 errors
-            }
-        
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-    
-    # ═══════════════════════════════════════════════════════════
-    # 🎯 COMPOSITE ACTIONS (Multi-Step)
-    # ═══════════════════════════════════════════════════════════
-    
-    def morning_routine(self) -> Dict:
-        """Morning Startup Routine"""
-        results = {
-            "success": True,
-            "steps": []
-        }
-        
-        # Step 1: Start all containers
-        docker_start = self.docker_start_all()
-        results["steps"].append({
-            "name": "Start Docker Containers",
-            "success": docker_start.get("success"),
-            "message": docker_start.get("message")
-        })
-        
-        # Step 2: Health Check
-        health = self.system_health_quick()
-        results["steps"].append({
-            "name": "System Health Check",
-            "success": health.get("success"),
-            "message": f"Overall: {health.get('overall', 'unknown')}"
-        })
-        
-        # Step 3: Check Semaphore
-        semaphore = self.semaphore_status()
-        results["steps"].append({
-            "name": "Semaphore Status",
-            "success": semaphore.get("success"),
-            "message": semaphore.get("message")
-        })
-        
-        # Overall success
-        results["success"] = all(step["success"] for step in results["steps"])
-        results["message"] = "Morning Routine abgeschlossen!"
-        
-        return results
-    
-    def emergency_stop(self) -> Dict:
-        """Emergency Stop - Stoppt alle Container"""
-        return self.docker_stop_all()
 
 
-# ============================================================================
-# Singleton Instance
-# ============================================================================
-
-_quick_actions_instance = None
+# ═══════════════════════════════════════════════════════════
+# PUBLIC API
+# ═══════════════════════════════════════════════════════════
 
 def get_quick_actions() -> QuickActions:
-    """
-    Gibt Singleton-Instance von QuickActions zurück
+    """Get Quick Actions instance"""
+    if 'quick_actions' not in st.session_state:
+        st.session_state.quick_actions = QuickActions()
+    return st.session_state.quick_actions
+
+
+def render_quick_actions_grid():
+    """Render Quick Actions Grid in UI"""
+    qa = get_quick_actions()
     
-    Returns:
-        QuickActions Instance
-    """
-    global _quick_actions_instance
-    if _quick_actions_instance is None:
-        _quick_actions_instance = QuickActions()
-    return _quick_actions_instance
+    st.subheader("⚡ Quick Actions")
+    
+    # Deployment Actions
+    with st.expander("🚀 Deployment", expanded=True):
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("Deploy Minimal", use_container_width=True):
+                result = qa.deploy_minimal()
+                if result['success']:
+                    st.success(result['message'])
+                else:
+                    st.error(result['message'])
+        
+        with col2:
+            if st.button("Deploy Standard", use_container_width=True, type="primary"):
+                result = qa.deploy_standard()
+                if result['success']:
+                    st.success(result['message'])
+                else:
+                    st.error(result['message'])
+        
+        with col3:
+            if st.button("Deploy Full", use_container_width=True):
+                result = qa.deploy_full()
+                if result['success']:
+                    st.success(result['message'])
+                else:
+                    st.error(result['message'])
+    
+    # Docker Actions
+    with st.expander("🐳 Docker"):
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            if st.button("Start All", use_container_width=True):
+                result = qa.docker_start_all()
+                st.toast(result['message'])
+        
+        with col2:
+            if st.button("Restart All", use_container_width=True):
+                result = qa.docker_restart_all()
+                st.toast(result['message'])
+        
+        with col3:
+            if st.button("Stop All", use_container_width=True):
+                result = qa.docker_stop_all()
+                st.toast(result['message'])
+        
+        with col4:
+            if st.button("Cleanup", use_container_width=True):
+                result = qa.docker_cleanup()
+                st.toast(result['message'])
+    
+    # System Actions
+    with st.expander("🔧 System"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("Health Check", use_container_width=True):
+                result = qa.system_health_check()
+                if result['success']:
+                    st.success(result['message'])
+                    st.json(result['details'])
+                else:
+                    st.error(result['message'])
+        
+        with col2:
+            if st.button("Check Errors", use_container_width=True):
+                result = qa.check_errors()
+                if result['success']:
+                    st.success(result['message'])
+                else:
+                    st.warning(result['message'])
+                    if 'details' in result:
+                        st.write(result['details'])
