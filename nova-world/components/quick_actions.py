@@ -147,6 +147,50 @@ class QuickActions:
             return {"available": False, "message": "Semaphore nicht erreichbar"}
 
 
+
+    def system_uptime(self) -> Dict[str, Any]:
+        """
+        System-Uptime abrufen
+        
+        Returns:
+            Dict mit success, message, uptime_seconds, uptime_human, timestamp
+        """
+        try:
+            import platform
+            import datetime
+            
+            if platform.system() == 'Linux':
+                with open('/proc/uptime', 'r') as f:
+                    uptime_seconds = float(f.readline().split()[0])
+            else:
+                import psutil
+                uptime_seconds = time.time() - psutil.boot_time()
+            
+            days = int(uptime_seconds // 86400)
+            hours = int((uptime_seconds % 86400) // 3600)
+            minutes = int((uptime_seconds % 3600) // 60)
+            
+            if days > 0:
+                uptime_human = f"{days}d {hours}h {minutes}m"
+            elif hours > 0:
+                uptime_human = f"{hours}h {minutes}m"
+            else:
+                uptime_human = f"{minutes}m"
+            
+            return {
+                'success': True,
+                'message': f"System Uptime: {uptime_human}",
+                'uptime_seconds': int(uptime_seconds),
+                'uptime_human': uptime_human,
+                'timestamp': datetime.datetime.now().isoformat()
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f"Uptime-Check fehlgeschlagen: {str(e)}",
+                'timestamp': datetime.datetime.now().isoformat()
+            }
+
 def get_quick_actions() -> QuickActions:
     if 'quick_actions' not in st.session_state:
         st.session_state.quick_actions = QuickActions()

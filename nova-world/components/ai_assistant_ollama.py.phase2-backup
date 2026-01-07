@@ -10,6 +10,8 @@ from components.ai import get_ai_assistant as _get_ai_assistant
 def get_ai_assistant():
     """
     DEPRECATED: Use components.ai.get_ai_assistant(mode="ollama")
+    
+    This wrapper is kept for backward compatibility.
     """
     warnings.warn(
         "ai_assistant_ollama.get_ai_assistant() is deprecated. "
@@ -18,3 +20,12 @@ def get_ai_assistant():
         stacklevel=2
     )
     return _get_ai_assistant(mode="ollama")
+
+
+# Backward compatible class name
+AIAssistantOllama = type('AIAssistantOllama', (), {
+    '__init__': lambda self: warnings.warn(
+        "AIAssistantOllama is deprecated. Use components.ai.get_ai_assistant()",
+        DeprecationWarning
+    )
+})
