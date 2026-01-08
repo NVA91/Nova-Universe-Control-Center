@@ -1,0 +1,90 @@
+---
+- name: Standard Deployment - Production Setup
+  hosts: all
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    deployment_profile: "{{ DEPLOYMENT_PROFILE | default('standard') }}"
+    apps_to_install: "{{ APPS | default('all-core') }}"
+    enable_monitoring: "{{ MONITORING | default('enabled') }}"
+    enable_backups: "{{ BACKUPS | default('enabled') }}"
+  
+  tasks:
+    - name: Display Deployment Banner
+      debug:
+        msg: |
+          ═══════════════════════════════════════════
+          🚀 STANDARD DEPLOYMENT STARTED
+          ═══════════════════════════════════════════
+          Profile: {{ deployment_profile }}
+          Apps: {{ apps_to_install }}
+          Monitoring: {{ enable_monitoring }}
+          Backups: {{ enable_backups }}
+          Host: {{ ansible_hostname }}
+          OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          ═══════════════════════════════════════════
+    
+    - name: Update APT Cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+    
+    - name: Upgrade System Packages
+      apt:
+        upgrade: dist
+        autoremove: yes
+        autoclean: yes
+      when: ansible_os_family == "Debian"
+    
+    - name: Install Core Dependencies
+      apt:
+        name:
+          - curl
+          - wget
+          - git
+          - htop
+          - vim
+          - net-tools
+          - python3-pip
+          - software-properties-common
+        state: present
+      when: ansible_os_family == "Debian"
+    
+    - name: Check if Docker is installed
+      command: docker --version
+      register: docker_check
+      ignore_errors: yes
+      changed_when: false
+    
+    - name: Install Docker (if not present)
+      shell: |
+        curl -fsSL https://get.docker.com | sh
+        systemctl enable docker
+        systemctl start docker
+        usermod -aG docker {{ ansible_user }}
+      args:
+        executable: /bin/bash
+      when: docker_check.rc != 0
+    
+    - name: Create Application Directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /opt/apps
+        - /opt/backups
+        - /opt/monitoring
+        - /opt/logs
+    
+    - name: Deployment Summary
+      debug:
+        msg: |
+          ═══════════════════════════════════════════
+          ✅ STANDARD DEPLOYMENT COMPLETE
+          ═══════════════════════════════════════════
+          Duration: ~15 minutes
+          Status: SUCCESS
+          ═══════════════════════════════════════════
