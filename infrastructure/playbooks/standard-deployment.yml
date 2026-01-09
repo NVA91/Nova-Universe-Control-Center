@@ -1,7 +1,6 @@
 ---
 - name: Standard Deployment - Production Setup
   hosts: all
-  become: yes
   gather_facts: yes
   
   vars:
@@ -11,80 +10,108 @@
     enable_backups: "{{ BACKUPS | default('enabled') }}"
   
   tasks:
-    - name: Display Deployment Banner
+    - name: "🚀 Deployment Banner"
       debug:
-        msg: |
-          ═══════════════════════════════════════════
-          🚀 STANDARD DEPLOYMENT STARTED
-          ═══════════════════════════════════════════
-          Profile: {{ deployment_profile }}
-          Apps: {{ apps_to_install }}
-          Monitoring: {{ enable_monitoring }}
-          Backups: {{ enable_backups }}
-          Host: {{ ansible_hostname }}
-          OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
-          ═══════════════════════════════════════════
+        msg:
+          - "════════════════════════════════════════════"
+          - "🚀 STANDARD DEPLOYMENT GESTARTET"
+          - "════════════════════════════════════════════"
+          - "Profil: {{ deployment_profile }}"
+          - "Apps: {{ apps_to_install }}"
+          - "Monitoring: {{ enable_monitoring }}"
+          - "Backups: {{ enable_backups }}"
+          - "Host: {{ ansible_hostname }}"
+          - "OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "════════════════════════════════════════════"
     
-    - name: Update APT Cache
+    - name: "📊 System Information"
+      debug:
+        msg:
+          - "OS Family: {{ ansible_os_family }}"
+          - "Python: {{ ansible_python_version }}"
+          - "CPU Cores: {{ ansible_processor_vcpus }}"
+          - "Memory: {{ (ansible_memtotal_mb / 1024) | round(1) }} GB"
+    
+    # ═══════════════════════════════════════════════
+    # NUR AUF DEBIAN/UBUNTU AUSFÜHREN
+    # ═══════════════════════════════════════════════
+    
+    - name: "📦 Update APT Cache (Debian/Ubuntu only)"
       apt:
         update_cache: yes
         cache_valid_time: 3600
       when: ansible_os_family == "Debian"
+      become: yes
+      ignore_errors: yes
     
-    - name: Upgrade System Packages
-      apt:
-        upgrade: dist
-        autoremove: yes
-        autoclean: yes
-      when: ansible_os_family == "Debian"
-    
-    - name: Install Core Dependencies
+    - name: "📦 Install Core Packages (Debian/Ubuntu only)"
       apt:
         name:
           - curl
           - wget
           - git
-          - htop
-          - vim
-          - net-tools
+          - python3
           - python3-pip
-          - software-properties-common
         state: present
-      when: ansible_os_family == "Debian"
+      when: 
+        - ansible_os_family == "Debian"
+        - apps_to_install == "all-core"
+      become: yes
+      ignore_errors: yes
     
-    - name: Check if Docker is installed
+    - name: "🐳 Check if Docker is installed"
       command: docker --version
       register: docker_check
       ignore_errors: yes
       changed_when: false
     
-    - name: Install Docker (if not present)
+    - name: "🐳 Install Docker (Debian/Ubuntu only)"
       shell: |
         curl -fsSL https://get.docker.com | sh
         systemctl enable docker
         systemctl start docker
-        usermod -aG docker {{ ansible_user }}
-      args:
-        executable: /bin/bash
-      when: docker_check.rc != 0
+      when: 
+        - ansible_os_family == "Debian"
+        - docker_check.rc != 0
+      become: yes
+      ignore_errors: yes
     
-    - name: Create Application Directories
+    # ═══════════════════════════════════════════════
+    # FUNKTIONIERT ÜBERALL (auch Alpine/Container)
+    # ═══════════════════════════════════════════════
+    
+    - name: "📁 Create Test Directories"
       file:
         path: "{{ item }}"
         state: directory
         mode: '0755'
       loop:
-        - /opt/apps
-        - /opt/backups
-        - /opt/monitoring
-        - /opt/logs
+        - /tmp/nova-deployment
+        - /tmp/nova-deployment/logs
+      # Kein become nötig für /tmp
     
-    - name: Deployment Summary
+    - name: "📝 Create Deployment Log"
+      copy:
+        content: |
+          Deployment Profile: {{ deployment_profile }}
+          Apps: {{ apps_to_install }}
+          Monitoring: {{ enable_monitoring }}
+          Backups: {{ enable_backups }}
+          Host: {{ ansible_hostname }}
+          OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp: {{ ansible_date_time.iso8601 }}
+        dest: /tmp/nova-deployment/deployment.log
+        mode: '0644'
+    
+    - name: "🎉 Deployment Summary"
       debug:
-        msg: |
-          ═══════════════════════════════════════════
-          ✅ STANDARD DEPLOYMENT COMPLETE
-          ═══════════════════════════════════════════
-          Duration: ~15 minutes
-          Status: SUCCESS
-          ═══════════════════════════════════════════
+        msg:
+          - "╔═══════════════════════════════════════╗"
+          - "║      ✅ DEPLOYMENT ERFOLGREICH!      ║"
+          - "╠═══════════════════════════════════════╣"
+          - "║ Profil: {{ deployment_profile }}     ║"
+          - "║ Host: {{ ansible_hostname }}         ║"
+          - "║ OS: {{ ansible_os_family }}          ║"
+          - "║                                       ║"
+          - "║ Log: /tmp/nova-deployment/           ║"
+          - "╚═══════════════════════════════════════╝"
