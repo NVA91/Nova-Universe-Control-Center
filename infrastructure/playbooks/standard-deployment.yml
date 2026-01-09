@@ -1,15 +1,24 @@
 ---
+# Standard Deployment Playbook
+#
+# Dieses Playbook führt eine Standard‑Produktionseinrichtung durch und ruft
+# anschliessend die rollenbasierten Optimierungen (CPU‑Tuning, Storage‑Setup,
+# System‑Updates, Netzwerk‑Hardening, Backups) auf. Vor den Rollen werden
+# generische Vorbereitungsschritte ausgeführt, die auf allen Hosts laufen.
+
 - name: Standard Deployment - Production Setup
   hosts: all
   gather_facts: yes
-  
+
   vars:
+    # Deployment‑Parameter können über Umgebungsvariablen überschrieben werden
     deployment_profile: "{{ DEPLOYMENT_PROFILE | default('standard') }}"
     apps_to_install: "{{ APPS | default('all-core') }}"
     enable_monitoring: "{{ MONITORING | default('enabled') }}"
     enable_backups: "{{ BACKUPS | default('enabled') }}"
-  
-  tasks:
+
+  pre_tasks:
+    # Anzeige eines Banners mit Informationen zum Deployment
     - name: "🚀 Deployment Banner"
       debug:
         msg:
@@ -23,7 +32,7 @@
           - "Host: {{ ansible_hostname }}"
           - "OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
           - "════════════════════════════════════════════"
-    
+
     - name: "📊 System Information"
       debug:
         msg:
@@ -31,11 +40,8 @@
           - "Python: {{ ansible_python_version }}"
           - "CPU Cores: {{ ansible_processor_vcpus }}"
           - "Memory: {{ (ansible_memtotal_mb / 1024) | round(1) }} GB"
-    
-    # ═══════════════════════════════════════════════
-    # NUR AUF DEBIAN/UBUNTU AUSFÜHREN
-    # ═══════════════════════════════════════════════
-    
+
+    # Debian/Ubuntu‑spezifische Vorbereitungen
     - name: "📦 Update APT Cache (Debian/Ubuntu only)"
       apt:
         update_cache: yes
@@ -43,7 +49,7 @@
       when: ansible_os_family == "Debian"
       become: yes
       ignore_errors: yes
-    
+
     - name: "📦 Install Core Packages (Debian/Ubuntu only)"
       apt:
         name:
@@ -53,33 +59,45 @@
           - python3
           - python3-pip
         state: present
-      when: 
+      when:
         - ansible_os_family == "Debian"
         - apps_to_install == "all-core"
       become: yes
       ignore_errors: yes
-    
+
+    # Docker prüfen/installieren
     - name: "🐳 Check if Docker is installed"
       command: docker --version
       register: docker_check
       ignore_errors: yes
       changed_when: false
-    
+
     - name: "🐳 Install Docker (Debian/Ubuntu only)"
       shell: |
         curl -fsSL https://get.docker.com | sh
         systemctl enable docker
         systemctl start docker
-      when: 
+      when:
         - ansible_os_family == "Debian"
         - docker_check.rc != 0
       become: yes
       ignore_errors: yes
-    
-    # ═══════════════════════════════════════════════
-    # FUNKTIONIERT ÜBERALL (auch Alpine/Container)
-    # ═══════════════════════════════════════════════
-    
+
+  roles:
+    # Hardware‑ und System‑Optimierungen
+    - role: system_tuning
+      tags: tuning
+    - role: storage_setup
+      tags: storage
+    - role: system_update
+      tags: update
+    - role: network_setup
+      tags: network
+    - role: backup
+      tags: backup
+
+  post_tasks:
+    # Generische Dateierstellung – funktioniert auf allen Systemen
     - name: "📁 Create Test Directories"
       file:
         path: "{{ item }}"
@@ -89,7 +107,7 @@
         - /tmp/nova-deployment
         - /tmp/nova-deployment/logs
       # Kein become nötig für /tmp
-    
+
     - name: "📝 Create Deployment Log"
       copy:
         content: |
@@ -102,7 +120,7 @@
           Timestamp: {{ ansible_date_time.iso8601 }}
         dest: /tmp/nova-deployment/deployment.log
         mode: '0644'
-    
+   
     - name: "🎉 Deployment Summary"
       debug:
         msg:
@@ -115,3 +133,56 @@
           - "║                                       ║"
           - "║ Log: /tmp/nova-deployment/           ║"
           - "╚═══════════════════════════════════════╝"
+
+  handlers:
+    # Handler für system_tuning Rolle
+    - name: "🔄 Restart System Tuning Services"
+      service:
+        name: "{{ item }}"
+        state: restarted
+      with_items:
+        - apache2
+        - mysql
+        - php7.4-fpm
+      when: ansible_os_family == "Debian"
+      become: yes
+      ignore_errors: yes
+
+    # Handler für storage_setup Rolle
+    - name: "🔄 Remount Filesystems"
+      command: mount -o remount,{{ item.options }} {{ item.device }} {{ item.mount }}
+      with_items: "{{ ansible_mounts }}"
+      when: item.mount is defined and item.mount != '' and item.fstype != 'tmpfs'
+      become: yes
+      ignore_errors: yes
+
+    # Handler für system_update Rolle
+    - name: "🔄 Reboot if required by system update"
+      reboot:
+        msg: "Rebooting the system after updates"
+        pre_reboot_delay: 0
+        post_reboot_delay: 300
+      when: ansible_os_family == "Debian" and ansible_pkg_mgr == "apt"
+      become: yes
+      ignore_errors: yes
+
+    # Handler für network_setup Rolle
+    - name: "🔄 Restart Networking"
+      service:
+        name: networking
+        state: restarted
+      when: ansible_os_family == "Debian"
+      become: yes
+      ignore_errors: yes
+
+    # Handler für backup Rolle
+    - name: "🔄 Restart Backup Services"
+      service:
+        name: "{{ item }}"
+        state: restarted
+      with_items:
+        - rsyslog
+        - cron
+      when: ansible_os_family == "Debian"
+      become: yes
+      ignore_errors: yes

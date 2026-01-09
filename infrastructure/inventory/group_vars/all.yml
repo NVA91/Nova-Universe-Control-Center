@@ -1,5 +1,5 @@
 ---
-# Apps Config (Dashboard entfernt!)
+
 apps_config:
   wireguard-client:
     vm: "vm-gateway"
@@ -45,34 +45,97 @@ apps_config:
     template: "ollama.yml"
     ports: ["11434:11434"]
 
-# Deployment Profile (damit localhost sie findet)
+## Deployment‑Profile
 deployment_profiles:
   minimal:
-    description: "Nur Basis-Infrastruktur"
+    description: "Nur Basis‑Infrastruktur"
     vms_to_create: ["vm-gateway"]
     apps_to_deploy: []
 
   standard:
     description: "Gateway + Office"
     vms_to_create: ["vm-gateway", "vm-office"]
-    apps_to_deploy: ["wireguard-client", "traefik", "paperless-ngx", "n8n", "postgresql"]
+    apps_to_deploy:
+      - wireguard-client
+      - traefik
+      - paperless-ngx
+      - n8n
+      - postgresql
 
   full:
     description: "Alle VMs + alle Apps"
     vms_to_create: ["vm-gateway", "vm-office", "vm-ai-lab"]
-    apps_to_deploy: ["wireguard-client", "traefik", "paperless-ngx", "n8n", "postgresql", "whisper", "ollama"]
+    apps_to_deploy:
+      - wireguard-client
+      - traefik
+      - paperless-ngx
+      - n8n
+      - postgresql
+      - whisper
+      - ollama
 
   repair:
     description: "Reparatur-Modus"
     vms_to_create: ["vm-gateway", "vm-office"]
-    apps_to_deploy: ["wireguard-client", "traefik", "postgresql"]
+    apps_to_deploy:
+      - wireguard-client
+      - traefik
+      - postgresql
 
   custom:
     description: "Benutzerdefiniert"
     vms_to_create: []
     apps_to_deploy: []
-    
-# Globale Variablen
+
+## Hardware‑spezifische Konfiguration
+storage:
+  drives:
+    system:
+      by_id: "/dev/disk/by-id/nvme-Fanxiang_1TB"
+      fstype: ext4
+      mountpoint: "/"
+    vmdata:
+      by_id: "/dev/disk/by-id/nvme-WD_Black_2TB"
+      vg_name: "vg_vmdata"
+      lv_name: "lv_vmdata"
+      mountpoint: "/vmdata"
+      fstype: ext4
+      mount_opts: "defaults,noatime,nodiratime,commit=60"
+    bulk:
+      by_id: "/dev/disk/by-id/nvme-Fanxiang_2TB"
+      vg_name: "vg_bulk"
+      lv_name: "lv_bulk"
+      mountpoint: "/bulk"
+      fstype: ext4
+      mount_opts: "defaults,noatime,nodiratime,commit=120"
+
+cpu:
+  amd_pstate_mode: guided
+  governor: schedutil
+  governor_tdp_limit: 45
+
+kernel:
+  enable_iommu: true
+  cmdline_extras: ""
+
+apt:
+  upgrade_kernel: false
+  unattended_upgrade: true
+
+sysctl:
+  vm_swappiness: 10
+  vm_vfs_cache_pressure: 50
+  vm_overcommit_memory: 1
+
+network:
+  interfaces_file: "/etc/network/interfaces"
+  template_src: "templates/interfaces.j2"
+
+backup:
+  snapshot_retention_days: 7
+  backup_mount: "/bulk/backups"
+
+## Globale Einstellungen
 do_validate: true
 app_root: /opt/novachris_home
 default_user: admin_novachris
@@ -88,6 +151,12 @@ log_level: INFO
 log_dir: /var/log/novachris_home
 system_timezone: UTC
 system_locale: en_US.UTF-8
-dns_servers: ["8.8.8.8", "8.8.4.4"]
+dns_servers:
+  - 8.8.8.8
+  - 8.8.4.4
 ssh_port: 22
 ssh_key_type: ed25519
+
+ssh_keys:
+  # Öffentliche SSH‑Keys für den Admin‑Benutzer. Passe die Schlüssel an deine Umgebung an.
+  - "ssh-ed25519 AAAAC3Nz..."

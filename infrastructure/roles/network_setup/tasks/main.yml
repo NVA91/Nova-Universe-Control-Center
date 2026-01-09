@@ -1,0 +1,32 @@
+
+# roles/network_setup/tasks/main.yml
+---
+- name: "Erzeuge temporäre Netzwerk‑Konfiguration"
+  template:
+    src: "{{ network.template_src }}"
+    dest: "{{ network.interfaces_file }}.new"
+
+- name: "Validiere neue Konfiguration mit ifreload"
+  command: "ifreload --config {{ network.interfaces_file }}.new --check"
+  register: ifreload_check
+  failed_when: ifreload_check.rc != 0
+  changed_when: false
+
+- name: "Ersetze Netzwerk‑Datei und lade neu"
+  when: ifreload_check.rc == 0
+  block:
+    - name: "Backup aktuelle interfaces"
+      copy:
+        src: "{{ network.interfaces_file }}"
+        dest: "{{ network.interfaces_file }}.bak"
+    - name: "Aktiviere neue Datei"
+      copy:
+        src: "{{ network.interfaces_file }}.new"
+        dest: "{{ network.interfaces_file }}"
+    - name: "Lade Konfiguration neu"
+      command: ifreload -a
+
+- name: "Aktiviere Proxmox‑Firewall auf dem Host"
+  command: "pve-firewall enable"
+  changed_when: false
+
