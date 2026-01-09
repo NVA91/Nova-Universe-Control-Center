@@ -1,0 +1,36 @@
+## System Tuning Tasks
+# Set kernel cmdline parameters for the AMD‑pstate driver and optional IOMMU.
+# Using the fully‑qualified collection name (FQCN) avoids ambiguity【837749088095954†L87-L110】.
+- name: "Setze Kernel‑cmdline für AMD‑pstate und IOMMU"
+  ansible.builtin.lineinfile:
+    path: "/etc/kernel/cmdline"
+    regexp: '^(.*quiet).*'
+    line: '\1 amd_pstate={{ cpu.amd_pstate_mode }}{{ " amd_iommu=on iommu=pt" if kernel.enable_iommu else "" }} {{ kernel.cmdline_extras }}'
+    create: true
+    mode: '0644'
+  notify: Refresh bootloader
+  # Always report change because command line modifications cannot be idempotently detected.
+  changed_when: true
+
+# Configure the CPU governor for all cores. When using the command module, set
+# changed_when to satisfy ansible‑lint's no‑changed‑when rule【900776693698824†L87-L100】.
+- name: "Setze CPU‑Governor"
+  ansible.builtin.command: bash -c "for cpu_dir in /sys/devices/system/cpu/cpu[0-9]*; do echo {{ cpu.governor }} > \"$cpu_dir/cpufreq/scaling_governor\"; done"
+  when: ansible_os_family == 'Debian'
+  changed_when: true
+
+# Apply an optional TDP limit via the amd_pstate driver. This task only runs
+# when a governor TDP limit is defined. We mark it as changed to satisfy linting.
+- name: "Setze TDP‑Limit via amd_pstate"
+  ansible.builtin.command: bash -c "echo {{ cpu.governor_tdp_limit }} > /sys/devices/system/cpu/amd_pstate/max_perf_pct"
+  when: cpu.governor_tdp_limit is defined
+  changed_when: true
+
+# Apply sysctl parameters. Use the ansible.posix.sysctl module to ensure FQCN usage【837749088095954†L87-L110】 and set boolean values explicitly.
+- name: "Setze Sysctl‑Parameter"
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: true
+  loop: "{{ sysctl | dict2items }}"

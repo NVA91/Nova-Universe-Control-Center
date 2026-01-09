@@ -1,0 +1,259 @@
+[{
+	"resource": "/home/chhexmg/projects/nova_universe/infrastructure/roles/system_update/tasks/main.yml",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"severity": 8,
+	"message": "Source contains multiple documents; please use YAML.parseAllDocuments() at line 3, column 1:\n\n# roles/system_update/tasks/main.yml\n---\n^\n",
+	"source": "Ansible [YAML]",
+	"startLineNumber": 3,
+	"startColumn": 1,
+	"endLineNumber": 29,
+	"endColumn": 34,
+	"modelVersionId": 5,
+	"origin": "extHost2"
+},{
+	"resource": "/home/chhexmg/projects/nova_universe/infrastructure/roles/system_tuning/tasks/main.yml",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"code": {
+		"value": "no-changed-when",
+		"target": {
+			"$mid": 1,
+			"path": "/rules/no-changed-when/",
+			"scheme": "https",
+			"authority": "ansible-lint.readthedocs.io"
+		}
+	},
+	"severity": 8,
+	"message": "Commands should not change things if nothing needs doing.",
+	"source": "ansible-lint",
+	"startLineNumber": 18,
+	"startColumn": 1,
+	"endLineNumber": 18,
+	"endColumn": 2147483648,
+	"modelVersionId": 3,
+	"origin": "extHost2"
+},{
+	"resource": "/home/chhexmg/projects/nova_universe/infrastructure/roles/system_tuning/tasks/main.yml",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"code": {
+		"value": "yaml[truthy]",
+		"target": {
+			"$mid": 1,
+			"path": "/rules/yaml/",
+			"scheme": "https",
+			"authority": "ansible-lint.readthedocs.io"
+		}
+	},
+	"severity": 8,
+	"message": "Truthy value should be one of \\[false, true]",
+	"source": "ansible-lint",
+	"startLineNumber": 28,
+	"startColumn": 1,
+	"endLineNumber": 28,
+	"endColumn": 2147483648,
+	"modelVersionId": 3,
+	"origin": "extHost2"
+},{
+	"resource": "/home/chhexmg/projects/nova_universe/infrastructure/roles/system_tuning/tasks/main.yml",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"code": {
+		"value": "fqcn[action]",
+		"target": {
+			"$mid": 1,
+			"path": "/rules/fqcn/",
+			"scheme": "https",
+			"authority": "ansible-lint.readthedocs.io"
+		}
+	},
+	"severity": 8,
+	"message": "Use FQCN for module actions, such `ansible.posix.sysctl`.",
+	"source": "ansible-lint",
+	"startLineNumber": 23,
+	"startColumn": 1,
+	"endLineNumber": 23,
+	"endColumn": 2147483648,
+	"modelVersionId": 3,
+	"origin": "extHost2"
+},{
+	"resource": "/home/chhexmg/projects/nova_universe/infrastructure/roles/system_tuning/tasks/main.yml",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"code": {
+		"value": "fqcn[action-core]",
+		"target": {
+			"$mid": 1,
+			"path": "/rules/fqcn/",
+			"scheme": "https",
+			"authority": "ansible-lint.readthedocs.io"
+		}
+	},
+	"severity": 8,
+	"message": "Use FQCN for builtin module actions (command).",
+	"source": "ansible-lint",
+	"startLineNumber": 18,
+	"startColumn": 1,
+	"endLineNumber": 18,
+	"endColumn": 2147483648,
+	"modelVersionId": 3,
+	"origin": "extHost2"
+},{
+	"resource": "/home/chhexmg/projects/nova_universe/infrastructure/roles/system_tuning/tasks/main.yml",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"code": {
+		"value": "no-changed-when",
+		"target": {
+			"$mid": 1,
+			"path": "/rules/no-changed-when/",
+			"scheme": "https",
+			"authority": "ansible-lint.readthedocs.io"
+		}
+	},
+	"severity": 8,
+	"message": "Commands should not change things if nothing needs doing.",
+	"source": "ansible-lint",
+	"startLineNumber": 13,
+	"startColumn": 1,
+	"endLineNumber": 13,
+	"endColumn": 2147483648,
+	"modelVersionId": 3,
+	"origin": "extHost2"
+},{
+	"resource": "/home/chhexmg/projects/nova_universe/infrastructure/roles/system_tuning/tasks/main.yml",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"code": {
+		"value": "fqcn[action-core]",
+		"target": {
+			"$mid": 1,
+			"path": "/rules/fqcn/",
+			"scheme": "https",
+			"authority": "ansible-lint.readthedocs.io"
+		}
+	},
+	"severity": 8,
+	"message": "Use FQCN for builtin module actions (lineinfile).",
+	"source": "ansible-lint",
+	"startLineNumber": 5,
+	"startColumn": 1,
+	"endLineNumber": 5,
+	"endColumn": 2147483648,
+	"modelVersionId": 3,
+	"origin": "extHost2"
+},{
+	"resource": "/home/chhexmg/projects/nova_universe/infrastructure/roles/system_tuning/tasks/main.yml",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"code": {
+		"value": "risky-file-permissions",
+		"target": {
+			"$mid": 1,
+			"path": "/rules/risky-file-permissions/",
+			"scheme": "https",
+			"authority": "ansible-lint.readthedocs.io"
+		}
+	},
+	"severity": 8,
+	"message": "File permissions unset or incorrect.",
+	"source": "ansible-lint",
+	"startLineNumber": 5,
+	"startColumn": 1,
+	"endLineNumber": 5,
+	"endColumn": 2147483648,
+	"modelVersionId": 3,
+	"origin": "extHost2"
+},{
+	"resource": "/home/chhexmg/projects/nova_universe/infrastructure/roles/system_tuning/tasks/main.yml",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"code": {
+		"value": "yaml[truthy]",
+		"target": {
+			"$mid": 1,
+			"path": "/rules/yaml/",
+			"scheme": "https",
+			"authority": "ansible-lint.readthedocs.io"
+		}
+	},
+	"severity": 8,
+	"message": "Truthy value should be one of \\[false, true]",
+	"source": "ansible-lint",
+	"startLineNumber": 10,
+	"startColumn": 1,
+	"endLineNumber": 10,
+	"endColumn": 2147483648,
+	"modelVersionId": 3,
+	"origin": "extHost2"
+},{
+	"resource": "/home/chhexmg/projects/nova_universe/infrastructure/roles/system_tuning/tasks/main.yml",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"code": {
+		"value": "fqcn[action-core]",
+		"target": {
+			"$mid": 1,
+			"path": "/rules/fqcn/",
+			"scheme": "https",
+			"authority": "ansible-lint.readthedocs.io"
+		}
+	},
+	"severity": 8,
+	"message": "Use FQCN for builtin module actions (command).",
+	"source": "ansible-lint",
+	"startLineNumber": 13,
+	"startColumn": 1,
+	"endLineNumber": 13,
+	"endColumn": 2147483648,
+	"modelVersionId": 3,
+	"origin": "extHost2"
+},{
+	"resource": "/home/chhexmg/projects/nova_universe/infrastructure/roles/storage_setup/tasks/main.yml",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"severity": 8,
+	"message": "Source contains multiple documents; please use YAML.parseAllDocuments() at line 3, column 1:\n\n# roles/storage_setup/tasks/main.yml\n---\n^\n",
+	"source": "Ansible [YAML]",
+	"startLineNumber": 3,
+	"startColumn": 1,
+	"endLineNumber": 88,
+	"endColumn": 1,
+	"modelVersionId": 2,
+	"origin": "extHost2"
+},{
+	"resource": "/home/chhexmg/projects/nova_universe/infrastructure/roles/network_setup/tasks/main.yml",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"severity": 8,
+	"message": "Source contains multiple documents; please use YAML.parseAllDocuments() at line 3, column 1:\n\n# roles/network_setup/tasks/main.yml\n---\n^\n",
+	"source": "Ansible [YAML]",
+	"startLineNumber": 3,
+	"startColumn": 1,
+	"endLineNumber": 32,
+	"endColumn": 1,
+	"modelVersionId": 2,
+	"origin": "extHost2"
+},{
+	"resource": "/home/chhexmg/projects/nova_universe/infrastructure/roles/backup/tasks/main.yml",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"severity": 8,
+	"message": "Source contains multiple documents; please use YAML.parseAllDocuments() at line 3, column 1:\n\n# roles/backup/tasks/main.yml\n---\n^\n",
+	"source": "Ansible [YAML]",
+	"startLineNumber": 3,
+	"startColumn": 1,
+	"endLineNumber": 21,
+	"endColumn": 1,
+	"modelVersionId": 2,
+	"origin": "extHost2"
+},{
+	"resource": "/home/chhexmg/projects/nova_universe/infrastructure/playbooks/standard-deployment.yml",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"code": {
+		"value": "syntax-check[specific]",
+		"target": {
+			"$mid": 1,
+			"path": "/rules/syntax-check/",
+			"scheme": "https",
+			"authority": "ansible-lint.readthedocs.io"
+		}
+	},
+	"severity": 8,
+	"message": "the role 'system_tuning' was not found in /home/chhexmg/projects/nova_universe/infrastructure/playbooks/roles:/home/chhexmg/.cache/ansible-compat/e1a2bd/roles:/home/chhexmg/.ansible/roles:/usr/share/ansible/roles:/etc/ansible/roles:/home/chhexmg/projects/nova_universe/infrastructure/playbooks",
+	"source": "ansible-lint",
+	"startLineNumber": 88,
+	"startColumn": 7,
+	"endLineNumber": 88,
+	"endColumn": 2147483648,
+	"modelVersionId": 527,
+	"origin": "extHost2"
+}]
