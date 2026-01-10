@@ -1,0 +1,17 @@
+---
+# --- NOVA UNIVERSE CONFIG ---
+
+# 1. DEIN USERNAME (Der Schlüssel zur Macht)
+nova_admin_name: "chhexmg"
+
+# 2. User-Liste für die GitHub-Rolle (SSH-Keys holen)
+nova_admin_users:
+  - name: "{{ nova_admin_name }}"
+    groups: sudo,docker
+
+# 3. Override für deine User-Rolle (damit PVE-Rechte an DICH gehen)
+default_user: "{{ nova_admin_name }}"
+
+# 4. Docker-Berechtigung
+docker_users:
+  - "{{ nova_admin_name }}"

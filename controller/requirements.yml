@@ -1,0 +1,15 @@
+---
+# --- EXTERNE LIBRARIES (Geerlingguy) ---
+# Werden nachgeladen, um User & Docker zu managen.
+
+- src: https://github.com/geerlingguy/ansible-role-github-users
+  name: lib_github_users
+  version: master
+
+- src: https://github.com/geerlingguy/ansible-role-docker
+  name: lib_docker
+  version: master
+
+- src: https://github.com/geerlingguy/ansible-role-pip
+  name: lib_pip
+  version: master
