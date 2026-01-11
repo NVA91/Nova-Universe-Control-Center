@@ -1,0 +1,4 @@
+*.retry
+*.bak
+shaders/old-*
+shaders/experiments/

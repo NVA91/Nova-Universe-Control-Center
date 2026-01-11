@@ -1,9 +1,0 @@
----
-dependencies:
-  - role: lib_github_users
-    vars:
-      # Holt die User-Liste aus der globalen Config (siehe Block 3)
-      github_users: "{{ nova_admin_users }}"
-      
-      # WICHTIG: Deine lokalen Keys bleiben sicherheitshalber erhalten
-      github_users_authorized_keys_exclusive: false

@@ -1,4 +1,0 @@
----
-# installation_classes Role - Standardwerte
-
-# Keine Standardwerte erforderlich - Steuerung erfolgt über do_infra, do_apps, do_test Flags
