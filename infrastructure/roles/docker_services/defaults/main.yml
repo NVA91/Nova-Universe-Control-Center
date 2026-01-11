@@ -1,0 +1,37 @@
+---
+docker_services_enabled: true
+docker_compose_version: '3.8'
+docker_base_path: /opt/docker
+docker_network: traefik-network
+
+semaphore_enabled: true
+semaphore_port: 3000
+semaphore_container_name: semaphore
+semaphore_db_password: "{{ vault_semaphore_db_password | default('changeme') }}"
+semaphore_admin_user: admin
+semaphore_admin_email: "admin@local"
+semaphore_image: "semaphoreui/semaphore:latest"
+
+semaphore_db_image: "postgres:15-alpine"
+semaphore_db_container_name: semaphore-db
+semaphore_db_user: semaphore
+semaphore_db_name: semaphore
+semaphore_db_port: 5432
+
+traefik_enabled: true
+traefik_port: 443
+traefik_dashboard_port: 8080
+traefik_container_name: traefik
+traefik_image: "traefik:v2.10"
+traefik_domain: "local"
+traefik_self_signed_enabled: true
+
+healthcheck_interval: 30s
+healthcheck_timeout: 10s
+healthcheck_retries: 3
+healthcheck_start_period: 40s
+
+docker_monitoring_enabled: true
+docker_log_driver: "json-file"
+docker_log_max_size: "10m"
+docker_log_max_file: "3"

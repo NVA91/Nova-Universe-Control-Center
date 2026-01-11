@@ -1,0 +1,28 @@
+---
+- name: "Deploy Complete Proxmox Stack – Phase 1"
+  hosts: proxmox_nodes
+  serial: 1
+  become: true
+  gather_facts: true
+  
+  pre_tasks:
+    - name: "Display Deployment Info"
+      debug:
+        msg: |
+          🚀 Deploying Proxmox Stack to: {{ inventory_hostname }}
+          System: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          CPUs: {{ ansible_processor_vcpus }} | RAM: {{ ansible_memtotal_mb }}MB
+
+  roles:
+    - { role: system_update, tags: ["update"] }
+    - { role: system_tuning, tags: ["tuning"] }
+    - { role: network_setup, tags: ["network"] }
+    - { role: storage_setup, tags: ["storage"] }
+    - { role: backup, tags: ["backup"] }
+    - { role: docker_services, tags: ["docker"] }
+
+  post_tasks:
+    - name: "Deployment Complete"
+      debug:
+        msg: |
+          ✅ Proxmox Stack deployment finished!

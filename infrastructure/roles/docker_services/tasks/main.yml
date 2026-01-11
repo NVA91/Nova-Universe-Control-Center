@@ -1,0 +1,84 @@
+---
+- name: "Docker Services Setup – Single-Node"
+  block:
+    - name: "Create Docker directories"
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: docker
+        mode: '0750'
+      loop:
+        - "{{ docker_base_path }}"
+        - "{{ docker_base_path }}/semaphore"
+        - "{{ docker_base_path }}/semaphore/config"
+        - "{{ docker_base_path }}/traefik"
+        - "{{ docker_base_path }}/traefik/certs"
+
+    - name: "Create Docker network"
+      docker_network:
+        name: "{{ docker_network }}"
+        state: present
+
+    - name: "Generate Traefik Self-Signed Certificate"
+      shell: |
+        openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+          -keyout {{ docker_base_path }}/traefik/certs/tls.key \
+          -out {{ docker_base_path }}/traefik/certs/tls.crt \
+          -subj "/C=DE/ST=RP/L=Annweiler/O=LocalStack/CN=*.local"
+      args:
+        creates: "{{ docker_base_path }}/traefik/certs/tls.crt"
+      when: traefik_self_signed_enabled
+
+    - name: "Generate docker-compose.yml"
+      template:
+        src: docker-compose.yml.j2
+        dest: "{{ docker_base_path }}/docker-compose.yml"
+        owner: root
+        group: docker
+        mode: '0640'
+      notify: "Restart Docker services"
+
+    - name: "Generate Semaphore environment file"
+      template:
+        src: semaphore.env.j2
+        dest: "{{ docker_base_path }}/semaphore/.env"
+        owner: root
+        group: docker
+        mode: '0640'
+      notify: "Restart Docker services"
+
+    - name: "Start Docker services"
+      docker_compose:
+        project_src: "{{ docker_base_path }}"
+        state: present
+        recreate: smart
+      register: docker_compose_result
+
+    - name: "Wait for services to be healthy"
+      pause:
+        seconds: 15
+
+    - name: "Check Semaphore API health"
+      uri:
+        url: "http://localhost:{{ semaphore_port }}/api/ping"
+        method: GET
+      register: semaphore_health
+      retries: 5
+      delay: 5
+      until: semaphore_health.status == 200
+      ignore_errors: true
+
+    - name: "Docker Services Status"
+      debug:
+        msg: |
+          ✅ Docker Services Started
+          
+          🔗 Access Points:
+          - Semaphore:  http://localhost:{{ semaphore_port }}
+          - Traefik:    https://traefik.{{ traefik_domain }}:{{ traefik_dashboard_port }}
+          - Network:    {{ docker_network }}
+          
+          📊 Health Status:
+          - Semaphore API: {{ semaphore_health.status | default('Unknown') }}
+          - Docker Compose: {{ docker_compose_result.changed | ternary('Updated', 'No changes') }}

@@ -1,0 +1,19 @@
+---
+- name: "Restart Docker services"
+  docker_compose:
+    project_src: "{{ docker_base_path }}"
+    state: present
+    recreate: always
+  listen: "Restart Docker services"
+
+- name: "Reload Traefik configuration"
+  docker_container:
+    name: "{{ traefik_container_name }}"
+    state: restarted
+  listen: "Reload Traefik"
+
+- name: "Check Docker health"
+  shell: docker ps --format "table {{.Names}}\t{{.Status}}"
+  register: docker_status
+  changed_when: false
+  listen: "Check Docker health"

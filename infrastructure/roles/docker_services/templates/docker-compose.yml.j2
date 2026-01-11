@@ -1,0 +1,104 @@
+version: '{{ docker_compose_version }}'
+
+services:
+  semaphore-db:
+    image: "{{ semaphore_db_image }}"
+    container_name: "{{ semaphore_db_container_name }}"
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: "{{ semaphore_db_user }}"
+      POSTGRES_PASSWORD: "{{ semaphore_db_password }}"
+      POSTGRES_DB: "{{ semaphore_db_name }}"
+    volumes:
+      - semaphore_db_data:/var/lib/postgresql/data
+    networks:
+      - "{{ docker_network }}"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{ semaphore_db_user }}"]
+      interval: {{ healthcheck_interval }}
+      timeout: {{ healthcheck_timeout }}
+      retries: {{ healthcheck_retries }}
+      start_period: {{ healthcheck_start_period }}
+    logging:
+      driver: "{{ docker_log_driver }}"
+      options:
+        max-size: "{{ docker_log_max_size }}"
+        max-file: "{{ docker_log_max_file }}"
+
+  semaphore:
+    image: "{{ semaphore_image }}"
+    container_name: "{{ semaphore_container_name }}"
+    restart: unless-stopped
+    user: "1000:1000"
+    ports:
+      - "{{ semaphore_port }}:3000"
+    environment:
+      SEMAPHORE_DB_DIALECT: postgres
+      SEMAPHORE_DB_HOST: "{{ semaphore_db_container_name }}"
+      SEMAPHORE_DB_PORT: "{{ semaphore_db_port }}"
+      SEMAPHORE_DB_USER: "{{ semaphore_db_user }}"
+      SEMAPHORE_DB_PASS: "{{ semaphore_db_password }}"
+      SEMAPHORE_DB_NAME: "{{ semaphore_db_name }}"
+      SEMAPHORE_ADMIN: "{{ semaphore_admin_user }}"
+      SEMAPHORE_ADMIN_PASSWORD: "{{ vault_semaphore_admin_password | default('changeme') }}"
+      SEMAPHORE_ADMIN_NAME: "Administrator"
+      SEMAPHORE_ADMIN_EMAIL: "{{ semaphore_admin_email }}"
+      SEMAPHORE_ACCESS_KEY_ENCRYPTION: "{{ vault_semaphore_access_key | default('your-secret-key-change-me') }}"
+      SEMAPHORE_WEB_ROOT: "http://localhost:{{ semaphore_port }}"
+      SEMAPHORE_LDAP_ACTIVATED: 'no'
+      ANSIBLE_HOST_KEY_CHECKING: 'False'
+    volumes:
+      - semaphore_config:/etc/semaphore
+      - semaphore_logs:/tmp/semaphore
+      - /tmp/semaphore:/tmp/semaphore:rw
+    networks:
+      - "{{ docker_network }}"
+    depends_on:
+      semaphore-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/ping"]
+      interval: {{ healthcheck_interval }}
+      timeout: {{ healthcheck_timeout }}
+      retries: {{ healthcheck_retries }}
+      start_period: {{ healthcheck_start_period }}
+    logging:
+      driver: "{{ docker_log_driver }}"
+      options:
+        max-size: "{{ docker_log_max_size }}"
+        max-file: "{{ docker_log_max_file }}"
+
+  traefik:
+    image: "{{ traefik_image }}"
+    container_name: "{{ traefik_container_name }}"
+    restart: unless-stopped
+    ports:
+      - "443:443"
+      - "{{ traefik_dashboard_port }}:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - "{{ docker_base_path }}/traefik/certs:/certs:ro"
+    networks:
+      - "{{ docker_network }}"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/ping"]
+      interval: {{ healthcheck_interval }}
+      timeout: {{ healthcheck_timeout }}
+      retries: {{ healthcheck_retries }}
+    logging:
+      driver: "{{ docker_log_driver }}"
+      options:
+        max-size: "{{ docker_log_max_size }}"
+        max-file: "{{ docker_log_max_file }}"
+
+volumes:
+  semaphore_db_data:
+    driver: local
+  semaphore_config:
+    driver: local
+  semaphore_logs:
+    driver: local
+
+networks:
+  {{ docker_network }}:
+    driver: bridge
