@@ -1,10 +1,10 @@
 # ============================================================================
-# Dockerfile - Ansible Test Controller (v2.0)
+# Dockerfile - Ansible Test Controller (v2.1 - mit Collections)
 # ============================================================================
-# Basis-Image: Ubuntu 22.04 LTS (stabiler, moderner als Debian Bullseye)
-# Enthält: Ansible, Python3, SSH-Tools, Linting-Tools
+# Basis-Image: Ubuntu 22.04 LTS
+# Enthält: Ansible, Python3, SSH-Tools, Linting-Tools, Galaxy Collections
 #
-# Build: docker-compose build
+# Build: docker-compose build --no-cache
 # Run: docker-compose run --rm ansible-controller
 
 ARG UBUNTU_VERSION=22.04
@@ -16,13 +16,13 @@ FROM ubuntu:${UBUNTU_VERSION}
 
 LABEL maintainer="Ansible Test Controller"
 LABEL description="Docker-basierter Ansible-Test-Controller für lokale Entwicklung und CI/CD"
-LABEL version="2.0"
+LABEL version="2.1"
 
 # ============================================================================
 # Build-Argumente
 # ============================================================================
 
-ARG ANSIBLE_VERSION=2.12.10
+ARG ANSIBLE_VERSION=2.16.3
 ARG PYTHON_VERSION=3
 
 # ============================================================================
@@ -80,7 +80,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ============================================================================
-# SECTION 2: Ansible und verwandte Tools installieren
+# SECTION 2: Ansible Core und Python-Tools installieren
 # ============================================================================
 
 RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel && \
@@ -110,6 +110,18 @@ RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel && \
     pylint \
     flake8 \
     black
+
+# ============================================================================
+# SECTION 2.5: Ansible Galaxy Collections (NEU & WICHTIG!)
+# ============================================================================
+# Hier installieren wir die fehlenden Module wie ansible.posix (sysctl)
+# und community.docker (für Container-Handling).
+
+RUN ansible-galaxy collection install \
+    ansible.posix \
+    community.general \
+    community.docker \
+    community.crypto
 
 # ============================================================================
 # SECTION 3: Ansible-Verzeichnisse erstellen

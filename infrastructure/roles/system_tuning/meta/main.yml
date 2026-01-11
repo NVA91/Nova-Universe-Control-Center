@@ -1,15 +1,12 @@
 galaxy_info:
-  author: your name
-  description: your role description
-  company: your company (optional)
-
-  # If the issue persists on the platform, uncomment the
-  # following line and set it to the platform name.
-  # platforms:
-  # - name: Fedora
-  #   versions:
-  #   - all
-
+  author: "Nova User"
+  description: System Tuning Role
+  company: "Nova Corp"
+  license: MIT
+  min_ansible_version: "2.1"  # Muss ein String sein (in Anführungszeichen)
+  platforms:
+    - name: Debian
+      versions:
+        - all
   galaxy_tags: []
-
 dependencies: []

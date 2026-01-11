@@ -7,11 +7,13 @@ Dieser Guide führt Sie durch die ersten Schritte mit dem vereinheitlichten Ansi
 ## Voraussetzungen
 
 ### Für lokales Testing
+
 - ✅ Docker installiert
 - ✅ Docker Compose installiert
 - ✅ WSL2 (für Windows-Benutzer)
 
 ### Für Produktions-Deployment
+
 - ✅ Ansible auf dem Control-Node
 - ✅ Proxmox VE 9.1 Server
 - ✅ SSH-Zugriff auf Proxmox-Host
@@ -49,7 +51,7 @@ make build
 ```
 
 **Erwartete Ausgabe**:
-```
+```bash
 🔨 Baue Docker-Image...
 [+] Building 120.5s (12/12) FINISHED
 ✅ Build abgeschlossen!
@@ -69,7 +71,7 @@ make test
 ```
 
 **Erwartete Ausgabe**:
-```
+```bash
 📝 Prüfe Playbook-Syntax...
 ✅ Syntax-Check erfolgreich!
 
@@ -100,7 +102,7 @@ make setup-prod
 ```
 
 **Erwartete Ausgabe**:
-```
+```bash
 🔐 Richte Produktionsumgebung ein...
 Generating public/private ed25519 key pair...
 ✅ Produktionsumgebung eingerichtet!
@@ -116,7 +118,7 @@ nano infrastructure/inventory/hosts.yml
 proxmox_servers:
   hosts:
     proxmox-host-01:
-      ansible_host: 192.168.1.100  # <-- Ihre IP
+      ansible_host: 192.168.2.77  # <-- Ihre IP
 ```
 
 ```bash
@@ -143,6 +145,7 @@ make deploy
 ```
 
 **Deployed**:
+
 - VMs: vm-gateway, vm-office
 - Apps: WireGuard, Traefik, Paperless-ngx, N8N, PostgreSQL
 
@@ -364,6 +367,6 @@ Nach dem Quickstart:
 
 ---
 
-**Viel Erfolg! 🚀**
+## Viel Erfolg! 🚀
 
 Bei Fragen: Siehe [TROUBLESHOOT.md](docs/TROUBLESHOOT.md)

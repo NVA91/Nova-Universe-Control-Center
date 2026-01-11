@@ -1,59 +1,44 @@
 ---
+# ============================================================================
+# NOVA UNIVERSE - GLOBALE KONFIGURATION (PHOENIX SETUP)
+# ============================================================================
 
-apps_config:
-  wireguard-client:
-    vm: "vm-gateway"
-    type: "docker-compose"
-    template: "wireguard-client.yml"
-    ports: ["51820:51820/udp"]
+# --- Identität ---
+project_name: novachris_home
+project_version: "1.0.0"
 
-  traefik:
-    vm: "vm-gateway"
-    type: "docker-compose"
-    template: "traefik.yml"
-    ports: ["80:80", "443:443", "8080:8080"]
+# Der User, der auf allen neuen VMs angelegt wird:
+default_user: chhexmg
 
-  paperless-ngx:
-    vm: "vm-office"
-    type: "docker-compose"
-    template: "paperless-ngx.yml"
-    ports: ["8000:8000"]
-    depends_on: ["postgresql"]
+# GitHub User für Public Keys (NVA91):
+github_username: NVA91
 
-  n8n:
-    vm: "vm-office"
-    type: "docker-compose"
-    template: "n8n.yml"
-    ports: ["5678:5678"]
-    depends_on: ["postgresql"]
+# --- System ---
+app_root: /opt/novachris_home
+enable_firewall: true
+enable_selinux: false
+enable_monitoring: true
+system_timezone: Europe/Berlin
+system_locale: en_US.UTF-8
 
-  postgresql:
-    vm: "vm-office"
-    type: "docker-compose"
-    template: "postgresql.yml"
-    ports: ["5432:5432"]
+# --- SSH & Sicherheit ---
+ssh_port: 22
+ssh_key_type: ed25519
 
-  whisper:
-    vm: "vm-ai-lab"
-    type: "docker-compose"
-    template: "whisper.yml"
-    ports: ["9000:9000"]
+# Deine SSH-Keys (Mix aus GitHub und manuellem Fallback für den YubiKey)
+ssh_keys:
+  # Dein YubiKey 5C Nano (Manuell, da sicher ist sicher)
+  - "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAINhfMt3dQaX2WV07ymjtTxHRBGmAP5/FrJkTS2jLlGynAAAABHNzaDo= yubikey"
 
-  ollama:
-    vm: "vm-ai-lab"
-    type: "docker-compose"
-    template: "ollama.yml"
-    ports: ["11434:11434"]
-
-## Deployment‑Profile
+# --- Deployment Einstellungen ---
 deployment_profiles:
   minimal:
-    description: "Nur Basis‑Infrastruktur"
+    description: "Nur Basis-Infrastruktur"
     vms_to_create: ["vm-gateway"]
     apps_to_deploy: []
 
   standard:
-    description: "Gateway + Office"
+    description: "Gateway + Office (Standard)"
     vms_to_create: ["vm-gateway", "vm-office"]
     apps_to_deploy:
       - wireguard-client
@@ -63,7 +48,7 @@ deployment_profiles:
       - postgresql
 
   full:
-    description: "Alle VMs + alle Apps"
+    description: "Alle VMs + AI Lab"
     vms_to_create: ["vm-gateway", "vm-office", "vm-ai-lab"]
     apps_to_deploy:
       - wireguard-client
@@ -74,89 +59,12 @@ deployment_profiles:
       - whisper
       - ollama
 
-  repair:
-    description: "Reparatur-Modus"
-    vms_to_create: ["vm-gateway", "vm-office"]
-    apps_to_deploy:
-      - wireguard-client
-      - traefik
-      - postgresql
-
-  custom:
-    description: "Benutzerdefiniert"
-    vms_to_create: []
-    apps_to_deploy: []
-
-## Hardware‑spezifische Konfiguration
-storage:
-  drives:
-    system:
-      by_id: "/dev/disk/by-id/nvme-Fanxiang_1TB"
-      fstype: ext4
-      mountpoint: "/"
-    vmdata:
-      by_id: "/dev/disk/by-id/nvme-WD_Black_2TB"
-      vg_name: "vg_vmdata"
-      lv_name: "lv_vmdata"
-      mountpoint: "/vmdata"
-      fstype: ext4
-      mount_opts: "defaults,noatime,nodiratime,commit=60"
-    bulk:
-      by_id: "/dev/disk/by-id/nvme-Fanxiang_2TB"
-      vg_name: "vg_bulk"
-      lv_name: "lv_bulk"
-      mountpoint: "/bulk"
-      fstype: ext4
-      mount_opts: "defaults,noatime,nodiratime,commit=120"
-
-cpu:
-  amd_pstate_mode: guided
-  governor: schedutil
-  governor_tdp_limit: 45
-
-kernel:
-  enable_iommu: true
-  cmdline_extras: ""
-
-apt:
-  upgrade_kernel: false
-  unattended_upgrade: true
-
-sysctl:
-  vm_swappiness: 10
-  vm_vfs_cache_pressure: 50
-  vm_overcommit_memory: 1
-
-network:
-  interfaces_file: "/etc/network/interfaces"
-  template_src: "templates/interfaces.j2"
-
-backup:
-  snapshot_retention_days: 7
-  backup_mount: "/bulk/backups"
-
-## Globale Einstellungen
-do_validate: true
-app_root: /opt/novachris_home
-default_user: admin_novachris
-project_name: novachris_home
-project_version: "1.0.0"
-enable_firewall: true
-enable_selinux: false
+# --- Backup ---
 backup_enabled: true
 backup_retention_days: 30
 backup_base_dir: /mnt/backup
-enable_monitoring: true
-log_level: INFO
-log_dir: /var/log/novachris_home
-system_timezone: UTC
-system_locale: en_US.UTF-8
+
+# --- DNS ---
 dns_servers:
   - 8.8.8.8
   - 8.8.4.4
-ssh_port: 22
-ssh_key_type: ed25519
-
-ssh_keys:
-  # Öffentliche SSH‑Keys für den Admin‑Benutzer. Passe die Schlüssel an deine Umgebung an.
-  - "ssh-ed25519 AAAAC3Nz..."

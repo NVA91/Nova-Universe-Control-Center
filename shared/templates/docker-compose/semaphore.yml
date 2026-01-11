@@ -23,6 +23,7 @@ services:
     image: semaphoreui/semaphore:latest
     container_name: semaphore
     restart: unless-stopped
+    user: "${UID}:${GID}"
     ports:
       - "${SEMAPHORE_PORT:-3000}:3000"
     environment:
@@ -62,6 +63,9 @@ services:
       
       # Playbook Logs
       - semaphore-logs:/tmp/semaphore
+      
+      # Host tmp for semaphore
+      - /tmp/semaphore:/tmp/semaphore:rw
       
     networks:
       - semaphore-network

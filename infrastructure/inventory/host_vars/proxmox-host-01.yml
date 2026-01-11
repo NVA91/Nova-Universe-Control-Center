@@ -5,7 +5,7 @@
 # Authentifizierung
 # ============================================================================
 
-ansible_user: root
+ansible_user: admin
 ansible_port: 22
 
 # ============================================================================
@@ -21,15 +21,15 @@ fqdn: "{{ hostname }}.{{ domain }}"
 # ============================================================================
 
 # Physisches Interface (anpassen an Ihre Hardware)
-pve_interface: eno1
+pve_interface: vmbr0
 
 # Management IP und Gateway
-pve_ip: 192.168.1.100/24
-pve_gateway: 192.168.1.1
+pve_ip: 192.168.2.77/24
+pve_gateway: 192.168.2.1
 
 # Alternative Netzwerk-Variablen (legacy)
-ip_address: 192.168.1.100
-gateway: 192.168.1.1
+ip_address: 192.168.2.77
+gateway: 192.168.2.1
 netmask: 255.255.255.0
 
 # ============================================================================
@@ -47,7 +47,7 @@ storage_vg_name: pve-vg
 storage_thin_pool: data
 
 # Thin Pool Größe
-storage_thin_size: 100G
+storage_thin_size: 150G
 
 # Storage Mount Point
 storage_mount_point: /mnt/storage
@@ -69,7 +69,7 @@ proxmox_role: hypervisor
 cluster_member: false
 
 # Proxmox Version (anpassen an Ihre Installation)
-proxmox_version: "8.0"
+proxmox_version: "9.1"
 
 # ============================================================================
 # VM-Template und Storage
@@ -82,5 +82,5 @@ vm_template_storage: local
 # Cluster-Einstellungen (für zukünftige Erweiterung)
 # ============================================================================
 
-cluster_enabled: false
-cluster_name: "novachris-cluster"
+#cluster_enabled: false
+#cluster_name: "novachris-cluster"

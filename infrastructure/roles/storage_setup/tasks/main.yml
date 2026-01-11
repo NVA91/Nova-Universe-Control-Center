@@ -1,46 +1,6 @@
 ---
-# Storage setup for ext4‑based volumes. This role formats and mounts drives,
-# applies SSD‑friendly mount options and enables periodic TRIM【149782932288187†L130-L158】.
-
-# Ensure the mount point exists.
-- name: "Create mount point"
+- name: "Storage: Ensure directories exist"
   ansible.builtin.file:
-    path: "{{ storage.mount_path }}"
+    path: /mnt/data
     state: directory
     mode: '0755'
-
-# Format the device as ext4 if requested. Use `force` only when formatting
-# unformatted devices; ensure that this task does not run repeatedly.
-- name: "Format device as ext4 if unformatted"
-  community.general.filesystem:
-    dev: "{{ storage.device }}"
-    fstype: ext4
-    state: present
-  when: storage.format_device | default(false)
-
-# Mount the filesystem with SSD‑optimized options. `noatime` reduces metadata
-# writes【149782932288187†L130-L158】, and we avoid `discard` in favour of a periodic TRIM timer.
-- name: "Mount filesystem with SSD‑optimized options"
-  ansible.posix.mount:
-    path: "{{ storage.mount_path }}"
-    src: "{{ storage.device }}"
-    fstype: ext4
-    opts: "noatime,nodiratime"
-    state: mounted
-
-# Ensure the filesystem is persistently mounted on boot.
-- name: "Ensure fstab entry is present"
-  ansible.posix.mount:
-    path: "{{ storage.mount_path }}"
-    src: "{{ storage.device }}"
-    fstype: ext4
-    opts: "noatime,nodiratime"
-    state: present
-
-# Enable and start periodic TRIM via fstrim.timer【149782932288187†L130-L158】.
-- name: "Enable periodic TRIM"
-  ansible.builtin.systemd:
-    name: fstrim.timer
-    enabled: true
-    state: started
-  when: storage.enable_trim | default(true)

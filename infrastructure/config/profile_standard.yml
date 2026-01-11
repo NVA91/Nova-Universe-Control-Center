@@ -1,3 +1,7 @@
 ---
-# Standard-Profil: Gateway + Office (Paperless, N8N, DB)
-wiz_profile: standard
+# Standard-Profil: Gateway + Office (Paperless, N8N, DB) + Nextcloud + Monitoring
+# Standardprofil für Deployment über Nova-Universe-Control-Center
+wiz_profile: "standard"
+# Standardprofil nutzt VMs und Apps aus group_vars/all.yml
+vms_to_create: "{{ deployment_profiles['standard'].vms_to_create }}"
+apps_to_deploy: "{{ deployment_profiles['standard'].apps_to_deploy }}"

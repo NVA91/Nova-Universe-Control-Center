@@ -106,18 +106,17 @@ test: lint syntax-check
 
 test-playbook:
 	@echo "🧪 Teste Playbook: $(PLAYBOOK)"
-	@cd controller && $(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) \
+	@$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) \
 		ansible-playbook /project/$(PLAYBOOK) --syntax-check
 	@echo "✅ Playbook-Test erfolgreich!"
 
 lint:
 	@echo "🔍 Führe ansible-lint aus..."
-	@cd controller && $(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) \
+	@$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) \
 		ansible-lint /project/infrastructure/site.yml || true
 
 syntax-check:
-	@echo "📝 Prüfe Playbook-Syntax..."
-	@cd controller && $(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) \
+	@$(DOCKER_COMPOSE) run --rm $(CONTAINER_NAME) \
 		ansible-playbook /project/infrastructure/site.yml --syntax-check
 	@echo "✅ Syntax-Check erfolgreich!"
 

@@ -1,279 +1,193 @@
----
-# system_setup Role - Proxmox VE Grundkonfiguration
+# novachris_home - Self-Hosted Cloud Deployment
+# "The Solid Base" - Version 3
 
 # ============================================================================
-# SECTION 1: Proxmox Repository Management
+# PLAY 1: Profil-Setup und Konfiguration
 # ============================================================================
 
 - name: "Proxmox Repos: Enterprise Repository deaktivieren (keine Subscription)"
-  ansible.builtin.lineinfile:
+  ansible.builtin.file:       # <--- HIER nutzen wir jetzt "file" statt "lineinfile"
     path: /etc/apt/sources.list.d/pve-enterprise.list
-    state: absent
+    state: absent             # Das löscht die Datei komplett, statt Zeilen zu suchen
   when: ansible_distribution == 'Debian'
   tags:
     - system_setup
     - repos
     - proxmox
 
-- name: "Proxmox Repos: No-Subscription Repository hinzufügen"
-  ansible.builtin.apt_repository:
-    repo: "deb http://download.proxmox.com/debian/pve {{ ansible_distribution_release }} pve-no-subscription"
-    state: present
-    filename: pve-no-subscription
-  when: ansible_distribution == 'Debian'
-  tags:
-    - system_setup
-    - repos
-    - proxmox
-
-- name: "Proxmox Repos: Proxmox Release Key hinzufügen"
-  ansible.builtin.apt_key:
-    url: "http://download.proxmox.com/debian/proxmox-release-{{ ansible_distribution_release }}.gpg"
-    state: present
-  when: ansible_distribution == 'Debian'
-  tags:
-    - system_setup
-    - repos
-    - proxmox
-
-# ============================================================================
-# SECTION 2: Paket-Updates und Installation
-# ============================================================================
-
-- name: "System: Paket-Manager aktualisieren"
-  ansible.builtin.apt:
-    update_cache: yes
-    cache_valid_time: 3600
-  when: ansible_os_family == 'Debian'
-  tags:
-    - system_setup
-    - packages
-
-- name: "System: Alle Pakete aktualisieren (inkl. PVE Kernel)"
-  ansible.builtin.apt:
-    upgrade: dist
-  when: ansible_os_family == 'Debian'
-  tags:
-    - system_setup
-    - packages
-    - proxmox
-
-- name: "System: Erforderliche Pakete installieren"
-  ansible.builtin.apt:
-    name: "{{ system_setup_packages }}"
-    state: present
-  when: ansible_os_family == 'Debian'
-  tags:
-    - system_setup
-    - packages
-
-- name: "Proxmox: ifupdown2 installieren (für Netzwerk-Management)"
-  ansible.builtin.apt:
-    name: ifupdown2
-    state: present
-  when: ansible_os_family == 'Debian'
-  tags:
-    - system_setup
-    - packages
-    - proxmox
-    - network
-
-# ============================================================================
-# SECTION 3: Kernel und Reboot Management
-# ============================================================================
-
-- name: "Proxmox: Prüfe ob PVE Kernel lädt"
-  ansible.builtin.command:
-    cmd: "uname -r"
-  register: kernel_check
-  changed_when: false
-  tags:
-    - system_setup
-    - kernel
-    - proxmox
-
-- name: "Proxmox: Warnung wenn Standard-Kernel lädt"
-  ansible.builtin.debug:
-    msg:
-      - "WARNUNG: Standard-Debian-Kernel wird verwendet ({{ kernel_check.stdout }})"
-      - "Proxmox sollte mit dem PVE-Kernel booten"
-      - "Ein Reboot ist empfohlen"
-  when: "'pve' not in kernel_check.stdout"
-  tags:
-    - system_setup
-    - kernel
-    - proxmox
-
-- name: "Proxmox: Entferne Standard-Debian-Kernel (optional)"
-  ansible.builtin.apt:
-    name: linux-image-amd64
-    state: absent
-  when: 
-    - ansible_os_family == 'Debian'
-    - remove_debian_kernel | default(false) | bool
-  tags:
-    - system_setup
-    - kernel
-    - proxmox
-
-# ============================================================================
-# SECTION 4: Systemkonfiguration
-# ============================================================================
-
-- name: "System: Zeitzone setzen"
-  community.general.timezone:
-    name: "{{ system_timezone | default('UTC') }}"
-  tags:
-    - system_setup
-    - configuration
-
-- name: "System: Locale konfigurieren"
-  ansible.builtin.command:
-    cmd: "update-locale LANG={{ system_locale | default('en_US.UTF-8') }}"
-  when: ansible_os_family == 'Debian'
-  tags:
-    - system_setup
-    - configuration
-
-- name: "System: Prüfe aktuellen Hostname"
-  ansible.builtin.command:
-    cmd: "hostname"
-  register: current_hostname
-  changed_when: false
-  tags:
-    - system_setup
-    - configuration
-    - hostname
-
-- name: "System: Zeige Hostname-Status"
-  ansible.builtin.debug:
-    msg:
-      - "Aktueller Hostname: {{ current_hostname.stdout }}"
-      - "Gewünschter Hostname: {{ inventory_hostname }}"
-  tags:
-    - system_setup
-    - configuration
-    - hostname
-
-- name: "System: Setze korrekten Hostname falls nötig"
-  block:
-    - name: "Hostname: Ändere Hostname"
-      ansible.builtin.hostname:
-        name: "{{ inventory_hostname }}"
-      when: current_hostname.stdout != inventory_hostname
-      register: hostname_changed
-      tags:
-        - system_setup
-        - configuration
-        - hostname
-
-    - name: "Hostname: Aktualisiere /etc/hosts"
-      ansible.builtin.lineinfile:
-        path: /etc/hosts
-        regexp: "^127.0.0.1"
-        line: "127.0.0.1 {{ inventory_hostname }} localhost"
-        state: present
-      when: hostname_changed is changed
-      tags:
-        - system_setup
-        - configuration
-        - hostname
-
-    - name: "Hostname: Plane Reboot nach Hostname-Änderung"
-      ansible.builtin.reboot:
-        msg: "Hostname wurde geändert. System wird in 60 Sekunden neu gestartet."
-        reboot_timeout: 300
-        delay: 60
-      when: hostname_changed is changed
-      tags:
-        - system_setup
-        - configuration
-        - hostname
-
-    - name: "Hostname: Zeige Abschluss-Meldung"
+  tasks:
+    - name: "Setup: Zeige Profil-Auswahl"
       ansible.builtin.debug:
         msg:
-          - "Hostname erfolgreich geändert zu: {{ inventory_hostname }}"
-          - "System wird neu gestartet..."
-      when: hostname_changed is changed
+          - "Profil: {{ wiz_profile }}"
+          - "Deployment-Profile: {{ deployment_profiles[wiz_profile].description }}"
+
+    - name: "Setup: Interaktive Abfrage bei Custom-Profil"
+      block:
+        - name: "Frage nach VMs"
+          ansible.builtin.pause:
+            prompt: "Welche VMs sollen erstellt werden? (gateway,office,ai-lab) [gateway,office]"
+          register: vm_input
+
+        - name: "Frage nach Apps"
+          ansible.builtin.pause:
+            prompt: "Welche Apps sollen deployed werden? (wireguard,traefik,paperless,n8n,postgresql,whisper,ollama) [paperless,n8n,postgresql]"
+          register: app_input
+
+        - name: "Setze Custom-Profil-Variablen"
+          ansible.builtin.set_fact:
+            custom_vms: "{{ (vm_input.user_input | default('gateway,office') | split(',')) }}"
+            custom_apps: "{{ (app_input.user_input | default('paperless-ngx,n8n,postgresql') | split(',')) }}"
+      when: wiz_profile == 'custom'
+
+    - name: "Setup: Erstelle WIZARD_CONFIG Host"
+      ansible.builtin.add_host:
+        name: WIZARD_CONFIG
+        ansible_connection: local
+        groups:
+          - wizard_config_group
+        wiz_profile: "{{ wiz_profile }}"
+        deployment_vms: "{{ deployment_profiles[wiz_profile].vms_to_create }}"
+        deployment_apps: "{{ deployment_profiles[wiz_profile].apps_to_deploy }}"
+
+# ============================================================================
+# PLAY 2: Proxmox Host Vorbereitung
+# ============================================================================
+
+- name: "PLAY 2: Proxmox Host Vorbereitung und VM-Provisioning"
+  hosts: proxmox_servers
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: "Proxmox: System-Setup"
+      ansible.builtin.include_role:
+        name: system_setup
       tags:
         - system_setup
-        - configuration
-        - hostname
 
-  tags:
-    - system_setup
-    - configuration
-    - hostname
+    - name: "Proxmox: User-Management"
+      ansible.builtin.include_role:
+        name: user_management
+      tags:
+        - user_management
 
-# ============================================================================
-# SECTION 5: Firewall Management
-# ============================================================================
+    - name: "Proxmox: Storage-Setup (Disk 2 Formatierung und Mounting)"
+      ansible.builtin.include_role:
+        name: storage_setup
+      tags:
+        - storage_setup
 
-- name: "Firewall: UFW entfernen (inkompatibel mit PVE Firewall)"
-  ansible.builtin.apt:
-    name: ufw
-    state: absent
-  when: ansible_os_family == 'Debian'
-  tags:
-    - system_setup
-    - firewall
-    - proxmox
-
-- name: "Firewall: PVE Firewall Cluster-Konfiguration"
-  ansible.builtin.file:
-    path: /etc/pve/firewall
-    state: directory
-    mode: '0755'
-  tags:
-    - system_setup
-    - firewall
-    - proxmox
-
-- name: "Firewall: PVE Firewall aktivieren (Cluster Level)"
-  ansible.builtin.lineinfile:
-    path: /etc/pve/firewall/cluster.fw
-    line: "enable: 1"
-    create: yes
-    mode: '0644'
-  tags:
-    - system_setup
-    - firewall
-    - proxmox
-
-- name: "Firewall: SSH Regel hinzufügen (Management)"
-  ansible.builtin.blockinfile:
-    path: /etc/pve/firewall/cluster.fw
-    block: |
-      [RULES]
-      IN SSH(ACCEPT)
-      IN HTTPS(ACCEPT)
-    create: yes
-    mode: '0644'
-  tags:
-    - system_setup
-    - firewall
-    - proxmox
+    - name: "Proxmox: VM-Provisioning"
+      ansible.builtin.include_role:
+        name: provision_guests
+      tags:
+        - provision_guests
 
 # ============================================================================
-# SECTION 6: Logging und Verzeichnisse
+# PLAY 3: Docker Setup auf Guest VMs
 # ============================================================================
 
-- name: "System: Log-Verzeichnis erstellen"
-  ansible.builtin.file:
-    path: "{{ log_dir }}"
-    state: directory
-    mode: '0755'
-  tags:
-    - system_setup
-    - logging
+- name: "PLAY 3: Docker Setup auf Guest VMs"
+  hosts: guest_vms
+  gather_facts: true
+  become: true
+  serial: 1
 
-- name: "System: Abschluss-Meldung"
-  ansible.builtin.debug:
-    msg:
-      - "System-Setup erfolgreich abgeschlossen"
-      - "Proxmox VE Basis-Konfiguration durchgeführt"
-      - "Repositories konfiguriert"
-      - "Firewall konfiguriert"
-  tags:
-    - system_setup
+  tasks:
+    - name: "Docker: Installiere Docker Engine"
+      ansible.builtin.include_role:
+        name: docker_setup
+      tags:
+        - docker_setup
+
+# ============================================================================
+# PLAY 4: App Deployment
+# ============================================================================
+
+- name: "PLAY 4: App Deployment auf Guest VMs"
+  hosts: guest_vms
+  gather_facts: false
+  become: true
+  serial: 1
+
+  tasks:
+    - name: "Apps: Deployment"
+      ansible.builtin.include_role:
+        name: app_deployment
+      tags:
+        - app_deployment
+
+# ============================================================================
+# PLAY 5: QA und Validierung
+# ============================================================================
+
+- name: "PLAY 5: QA Smoke Tests"
+  hosts: proxmox_servers
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: "QA: Smoke Tests"
+      ansible.builtin.include_role:
+        name: qa_smoke
+      tags:
+        - qa_smoke
+
+# ============================================================================
+# PLAY 6: Firewall-Aktivierung (AM ENDE - Nach allen Setup-Tasks)
+# ============================================================================
+
+- name: "PLAY 6: Firewall-Aktivierung und Sicherheit"
+  hosts: proxmox_servers
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: "Firewall: Aktiviere PVE Firewall (am Ende)"
+      ansible.builtin.include_role:
+        name: system_setup
+      vars:
+        firewall_activation_only: true
+      tags:
+        - firewall
+        - security
+
+# ============================================================================
+# PLAY 7: Abschluss und Reporting
+# ============================================================================
+
+- name: "PLAY 7: Deployment Abschluss"
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: "Report: Deployment Summary"
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "DEPLOYMENT ERFOLGREICH ABGESCHLOSSEN"
+          - "=========================================="
+          - "Profil: {{ hostvars['WIZARD_CONFIG']['wiz_profile'] }}"
+          - "Erstellte VMs: {{ hostvars['WIZARD_CONFIG']['deployment_vms'] }}"
+          - "Deployed Apps: {{ hostvars['WIZARD_CONFIG']['deployment_apps'] }}"
+          - "Zeitstempel: {{ ansible_date_time.iso8601 }}"
+          - "=========================================="
+      tags:
+        - report
+
+    - name: "Report: Nächste Schritte"
+      ansible.builtin.debug:
+        msg:
+          - ""
+          - "Nächste Schritte:"
+          - "1. Überprüfe die VMs: ssh admin@vm-gateway.example.local"
+          - "2. Öffne die Dashboards:"
+          - "   - Traefik: http://localhost:8080"
+          - "   - Paperless: http://localhost:8000"
+          - "   - N8N: http://localhost:5678"
+          - "3. Konfiguriere WireGuard für Remote-Zugriff"
+          - "4. Richte DNS-Einträge ein"
+          - ""
+      tags:
+        - report  

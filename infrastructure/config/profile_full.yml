@@ -1,3 +1,5 @@
 ---
-# Full-Profil: Alle VMs + alle Apps (Gateway, Office, AI-Lab)
-wiz_profile: full
+# Vollständiges Profil (Full) für maximales Deployment
+wiz_profile: "full"
+vms_to_create: "{{ deployment_profiles['full'].vms_to_create }}"
+apps_to_deploy: "{{ deployment_profiles['full'].apps_to_deploy }}"

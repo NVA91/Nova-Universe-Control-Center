@@ -1,0 +1,37 @@
+
+ # --- ECHTE WERTE ---
+
+# Proxmox (admin@pa)
+vault_proxmox_api_token: "f4ce9861-7a31-49b8-a9b9-42198d824df8"
+
+# OpenAI (für deinen Secrets Manager)
+#vault_openai_api_key: "sk-proj-...."
+
+# DATENBANKEN (Frisch generiert mit openssl!)
+vault_postgresql_password: "nk6F/dT2oi1fwAJdNsGWK1DrIdgUnUhKWEpmOReN1HY="
+vault_paperless_db_password: "5ROPMN/+tnxM3TkguHYtolcrzHC1pwFDxzo0da52NeA="
+
+# SSH (Dein YubiKey Public Key String)
+vault_ssh_public_key: "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAINhfMt3dQaX2WV07ymjtTxHRBGmAP5/FrJkTS2jLlGynAAAABHNzaDo= yubikey-nova"
+
+# Database Configuration
+vault_SEMAPHORE_DB_PASSWORD:  "+Cp0K8Wt4T50VQKy2euJIj3cmRKNCxs6c6X1d8mGJb8="
+
+# Admin User (initial setup)
+vault_SEMAPHORE_ADMIN_USER=jnova
+vault_SEMAPHORE_ADMIN_PASSWORD=changeme_secure_password
+SEMAPHORE_ADMIN_NAME=
+SEMAPHORE_ADMIN_EMAIL=admin@example.com
+
+# Security
+SEMAPHORE_ACCESS_KEY=your-secret-encryption-key-change-me-32chars
+
+# Web Configuration
+SEMAPHORE_PORT=3000
+SEMAPHORE_WEB_ROOT=http://localhost:3000
+
+# Ansible Project Path (absolute path to your unified-ansible-project)
+ANSIBLE_PROJECT_PATH=/opt/unified-ansible-project
+
+# SSH Key Path (for deployments)
+SSH_KEY_PATH=/opt/unified-ansible-project/.ssh

@@ -271,10 +271,10 @@ make deploy-dry-run
 
 ### Noch zu testen (beim Einsatz)
 
-- [ ] Docker-Image bauen (`make build`)
-- [ ] Container-Tests (`make test`)
-- [ ] Interaktive Shell (`make shell`)
-- [ ] Produktions-Deployment (`make deploy-dry-run`)
+- [x] Docker-Image bauen (`make build`)
+- [x] Container-Tests (`make test`)
+- [x] Interaktive Shell (`make shell`)
+- [x] Produktions-Deployment (`make deploy-dry-run`)
 
 ## Fazit
 
@@ -290,6 +290,6 @@ Das vereinheitlichte Repository ist:
 
 ---
 
-**Erstellt von**: Manus AI Agent  
+**Erstellt von**: nova  
 **Datum**: 2026-01-03  
 **Version**: 1.0

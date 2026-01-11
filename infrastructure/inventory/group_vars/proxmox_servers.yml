@@ -2,7 +2,7 @@
 # Variablen für die Proxmox-Server-Gruppe
 
 # Proxmox-spezifische Einstellungen
-proxmox_version: "8.0"  # Anpassen an Ihre Proxmox-Version
+proxmox_version: "9.1"  # Anpassen an Ihre Proxmox-Version
 
 # VM-Template
 vm_template_name: ubuntu-2204-cloud
@@ -17,8 +17,8 @@ storage_location: /var/lib/vz
 storage_type: dir
 
 # Cluster-Einstellungen
-cluster_enabled: false
-cluster_name: "novachris-cluster"
+#cluster_enabled: false
+#cluster_name: "novachris-cluster"
 
 # Ressourcen-Limits
 vm_default_cores: 2

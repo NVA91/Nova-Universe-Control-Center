@@ -1,0 +1,8 @@
+---
+# Variablen müssen mit dem Rollennamen beginnen
+system_tuning_cpu:
+  amd_pstate_mode: active
+  governor: schedutil
+
+system_tuning_kernel:
+  enable_iommu: false

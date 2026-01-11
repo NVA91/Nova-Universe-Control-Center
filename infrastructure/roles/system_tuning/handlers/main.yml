@@ -1,0 +1,5 @@
+---
+- name: Refresh bootloader
+  ansible.builtin.command: update-grub
+  changed_when: true  # Linter will wissen, wann sich was ändert
+  failed_when: false
