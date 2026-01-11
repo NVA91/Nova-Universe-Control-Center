@@ -1,0 +1,40 @@
+---
+- name: "Setup n8n (Workflow Automation)"
+  hosts: localhost
+  gather_facts: false
+  
+  vars:
+    n8n_port: 5678
+    n8n_admin_email: "admin@local"
+    n8n_admin_password: "{{ vault_n8n_admin_password | default('changeme') }}"
+  
+  tasks:
+    - name: "Start n8n"
+      docker_container:
+        name: n8n-workflows
+        image: "n8n/n8n:latest"
+        state: started
+        restart_policy: always
+        env:
+          N8N_HOST: "n8n.local"
+          N8N_PROTOCOL: "https"
+          N8N_PORT: "{{ n8n_port }}"
+          N8N_BASIC_AUTH_ACTIVE: "true"
+          N8N_BASIC_AUTH_USER: "{{ n8n_admin_email }}"
+          N8N_BASIC_AUTH_PASSWORD: "{{ n8n_admin_password }}"
+        ports:
+          - "{{ n8n_port }}:{{ n8n_port }}"
+        volumes:
+          - n8n_data:/home/node/.n8n
+        networks:
+          - name: traefik
+            aliases:
+              - n8n
+        labels:
+          traefik.enable: "true"
+          traefik.http.routers.n8n.rule: "Host(`n8n.local`)"
+          traefik.http.services.n8n.loadbalancer.server.port: "{{ n8n_port }}"
+    
+    - name: "n8n Setup Complete"
+      debug:
+        msg: "✅ n8n started"

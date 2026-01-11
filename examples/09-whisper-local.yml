@@ -1,0 +1,41 @@
+---
+- name: "Setup Whisper (Local, Medium Model)"
+  hosts: localhost
+  gather_facts: true
+  
+  vars:
+    whisper_model: "medium"
+    whisper_port: 8001
+  
+  tasks:
+    - name: "Create Whisper directories"
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /opt/whisper
+        - /opt/whisper/models
+    
+    - name: "Start Whisper API"
+      docker_container:
+        name: whisper-api
+        image: "openai/whisper:latest"
+        state: started
+        restart_policy: always
+        ports:
+          - "{{ whisper_port }}:{{ whisper_port }}"
+        volumes:
+          - /opt/whisper/models:/root/.cache/whisper
+        networks:
+          - name: traefik
+            aliases:
+              - whisper
+        labels:
+          traefik.enable: "true"
+          traefik.http.routers.whisper.rule: "Host(`whisper.local`)"
+          traefik.http.services.whisper.loadbalancer.server.port: "{{ whisper_port }}"
+    
+    - name: "Whisper Setup Complete"
+      debug:
+        msg: "✅ Whisper API started ({{ whisper_model }} model)"

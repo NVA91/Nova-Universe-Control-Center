@@ -1,0 +1,61 @@
+---
+- name: "Setup Paperless-NGX + PostgreSQL"
+  hosts: localhost
+  gather_facts: false
+  
+  vars:
+    postgres_password: "{{ vault_postgres_password | default('changeme') }}"
+    paperless_secret: "{{ vault_paperless_secret | default('changeme') }}"
+  
+  tasks:
+    - name: "Create docker network (if not exists)"
+      docker_network:
+        name: traefik
+        state: present
+    
+    - name: "Start PostgreSQL"
+      docker_container:
+        name: postgres-office
+        image: "postgres:15-alpine"
+        state: started
+        restart_policy: always
+        env:
+          POSTGRES_PASSWORD: "{{ postgres_password }}"
+          POSTGRES_DB: "paperless"
+        volumes:
+          - paperless_postgres_data:/var/lib/postgresql/data
+        networks:
+          - name: traefik
+            aliases:
+              - postgres
+    
+    - name: "Start Paperless-NGX"
+      docker_container:
+        name: paperless-ngx
+        image: "ghcr.io/paperless-ngx/paperless-ngx:latest"
+        state: started
+        restart_policy: always
+        env:
+          PAPERLESS_SECRET_KEY: "{{ paperless_secret }}"
+          PAPERLESS_ADMIN_USER: "admin"
+          PAPERLESS_ADMIN_PASSWORD: "{{ vault_paperless_admin_password | default('changeme') }}"
+          PAPERLESS_DB_ENGINE: "django.db.backends.postgresql"
+          PAPERLESS_DB_NAME: "paperless"
+          PAPERLESS_DB_USER: "postgres"
+          PAPERLESS_DB_PASSWORD: "{{ postgres_password }}"
+          PAPERLESS_DB_HOST: "postgres"
+        volumes:
+          - paperless_data:/home/paperless/data
+          - paperless_media:/home/paperless/media
+        networks:
+          - name: traefik
+            aliases:
+              - paperless
+        labels:
+          traefik.enable: "true"
+          traefik.http.routers.paperless.rule: "Host(`paperless.local`)"
+          traefik.http.services.paperless.loadbalancer.server.port: "8000"
+    
+    - name: "Paperless-NGX Ready"
+      debug:
+        msg: "✅ Paperless-NGX + PostgreSQL started"

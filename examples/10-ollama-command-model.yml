@@ -1,0 +1,67 @@
+---
+- name: "Setup Ollama (Small Model – Command Execution)"
+  hosts: localhost
+  gather_facts: true
+  
+  vars:
+    ollama_model: "mistral"
+    ollama_port: 11434
+  
+  tasks:
+    - name: "Check system resources"
+      assert:
+        that:
+          - ansible_memtotal_mb >= 8000
+        fail_msg: "Need at least 8GB RAM for Ollama"
+    
+    - name: "Create Ollama directories"
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /opt/ollama
+        - /opt/ollama/models
+    
+    - name: "Start Ollama container"
+      docker_container:
+        name: ollama-ai
+        image: "ollama/ollama:latest"
+        state: started
+        restart_policy: always
+        env:
+          OLLAMA_NUM_THREAD: "4"
+          OLLAMA_NUM_GPU: "0"
+        ports:
+          - "{{ ollama_port }}:{{ ollama_port }}"
+        volumes:
+          - /opt/ollama/models:/root/.ollama
+        networks:
+          - name: traefik
+            aliases:
+              - ollama
+        labels:
+          traefik.enable: "true"
+          traefik.http.routers.ollama.rule: "Host(`ollama.local`)"
+          traefik.http.services.ollama.loadbalancer.server.port: "{{ ollama_port }}"
+    
+    - name: "Pull {{ ollama_model }} model"
+      shell: |
+        docker exec ollama-ai ollama pull {{ ollama_model }}
+      register: ollama_pull
+      changed_when: "'pulling' in ollama_pull.stdout.lower()"
+      retries: 3
+      delay: 10
+    
+    - name: "Test Ollama API"
+      uri:
+        url: "http://localhost:{{ ollama_port }}/api/tags"
+        method: GET
+      register: ollama_test
+      retries: 5
+      delay: 5
+      until: ollama_test.status == 200
+    
+    - name: "Ollama Setup Complete"
+      debug:
+        msg: "✅ Ollama started ({{ ollama_model }} model)"

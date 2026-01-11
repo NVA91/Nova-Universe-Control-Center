@@ -1,0 +1,96 @@
+---
+- name: "Setup Traefik Gateway (Local HTTPS only)"
+  hosts: localhost
+  gather_facts: false
+  
+  vars:
+    traefik_image: "traefik:v2.10"
+    traefik_port: 443
+    traefik_dashboard_port: 8080
+  
+  tasks:
+    - name: "Create Traefik directories"
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /opt/traefik
+        - /opt/traefik/certs
+        - /opt/traefik/config
+    
+    - name: "Generate Self-Signed Certificate (Local CA)"
+      shell: |
+        openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+          -keyout /opt/traefik/certs/tls.key \
+          -out /opt/traefik/certs/tls.crt \
+          -subj "/C=DE/ST=RP/L=Annweiler/O=LocalAIOffice/CN=*.local"
+      args:
+        creates: /opt/traefik/certs/tls.crt
+    
+    - name: "Create Traefik config (Local only)"
+      copy:
+        content: |
+          global:
+            checkNewVersion: false
+            sendAnonymousUsage: false
+          
+          entryPoints:
+            websecure:
+              address: ":443"
+              http:
+                tls:
+                  certResolver: localca
+                  domains:
+                    - main: "*.local"
+          
+          api:
+            dashboard: true
+            debug: true
+          
+          certificatesResolvers:
+            localca:
+              acme:
+                email: "admin@local"
+                storage: "/etc/traefik/certs/acme.json"
+          
+          providers:
+            docker:
+              endpoint: "unix:///var/run/docker.sock"
+              exposedByDefault: false
+              network: "traefik"
+          
+          log:
+            level: INFO
+        dest: /opt/traefik/config/traefik.yml
+    
+    - name: "Start Traefik container"
+      docker_container:
+        name: traefik-gateway
+        image: "{{ traefik_image }}"
+        state: started
+        restart_policy: always
+        ports:
+          - "443:443"
+          - "{{ traefik_dashboard_port }}:8080"
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock:ro
+          - /opt/traefik/config/traefik.yml:/traefik.yml:ro
+          - /opt/traefik/certs:/certs:ro
+        networks:
+          - name: traefik
+            aliases:
+              - traefik
+        labels:
+          traefik.enable: "true"
+          traefik.http.routers.dashboard.rule: "Host(`traefik.local`)"
+          traefik.http.routers.dashboard.service: "api@internal"
+          traefik.http.services.dashboard.loadbalancer.server.port: "8080"
+    
+    - name: "Traefik Gateway Ready"
+      debug:
+        msg: |
+          ✅ Traefik Gateway started
+          
+          🔐 HTTPS: https://traefik.local:443
+          📊 Dashboard: https://traefik.local:{{ traefik_dashboard_port }}
