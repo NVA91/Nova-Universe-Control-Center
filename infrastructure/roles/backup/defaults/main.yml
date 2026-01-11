@@ -1,0 +1,12 @@
+---
+backup_enabled: true
+backup_retention_days: 30
+backup_storage: /backups
+backup_compression: gzip
+backup_paths:
+  - /opt/semaphore
+  - /var/lib/postgresql
+  - /etc/ansible
+backup_schedule: "0 2 * * *"
+backup_verify_enabled: true
+backup_parallel_jobs: 4
