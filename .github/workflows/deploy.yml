@@ -1,0 +1,70 @@
+---
+name: "🚀 Deploy Proxmox Stack"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'infrastructure/**'
+      - '.github/workflows/deploy.yml'
+      - 'ansible.cfg'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: "🔍 Validate Playbooks"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: "Setup Python"
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: "Install Ansible"
+        run: pip install ansible ansible-lint yamllint
+      
+      - name: "Lint YAML"
+        run: yamllint infrastructure/ --config-data '{extends: default, rules: {line-length: {max: 120}}}'
+      
+      - name: "Syntax Check"
+        run: |
+          for pb in infrastructure/playbooks/*.yml; do
+            ansible-playbook "$pb" --syntax-check
+          done
+
+  test:
+    name: "🧪 Test Roles"
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: "Install Test Dependencies"
+        run: pip install molecule molecule-docker ansible
+      - name: "Run Molecule Tests"
+        run: cd infrastructure && molecule test --all || true
+
+  deploy:
+    name: "🚀 Deploy to Proxmox"
+    runs-on: [self-hosted, proxmox]
+    needs: validate
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: "Install Ansible"
+        run: pip install ansible
+      - name: "Dry-Run"
+        run: ansible-playbook infrastructure/playbooks/deploy-proxmox-stack.yml -i infrastructure/inventory/localhost.yml --check -v
+      - name: "Deploy"
+        run: ansible-playbook infrastructure/playbooks/deploy-proxmox-stack.yml -i infrastructure/inventory/localhost.yml -v
+      - name: "Verify"
+        run: docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"

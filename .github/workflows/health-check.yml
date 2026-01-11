@@ -1,0 +1,27 @@
+---
+name: "🏥 Daily Health Check"
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    name: "🔍 Check Service Health"
+    runs-on: [self-hosted, proxmox]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: "Install Tools"
+        run: pip install ansible
+      - name: "Docker Services"
+        run: docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+      - name: "Semaphore Health"
+        run: curl -sf http://localhost:3000/api/ping && echo "✅ Semaphore OK" || echo "⚠️ Semaphore DOWN"
+      - name: "Traefik Health"
+        run: curl -sf -k https://localhost:8080/ping && echo "✅ Traefik OK" || echo "⚠️ Traefik DOWN"
+      - name: "Disk Space"
+        run: df -h /

@@ -1,0 +1,32 @@
+---
+name: "🔄 Emergency Rollback"
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_commit:
+        description: 'Commit to rollback to'
+        required: true
+
+jobs:
+  rollback:
+    name: "🔄 Rollback"
+    runs-on: [self-hosted, proxmox]
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.target_commit }}
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: "Install Ansible"
+        run: pip install ansible
+      - name: "Confirm"
+        run: |
+          echo "⚠️ Rolling back to: ${{ github.event.inputs.target_commit }}"
+          git log --oneline -n 5
+      - name: "Execute Rollback"
+        run: ansible-playbook infrastructure/playbooks/deploy-proxmox-stack.yml -i infrastructure/inventory/localhost.yml -v
+      - name: "Verify"
+        run: docker ps --format "table {{.Names}}\t{{.Status}}"
