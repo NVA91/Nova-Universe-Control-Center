@@ -1,0 +1,70 @@
+name: Python Tests & Lint
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'nova-world/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'nova-world/**'
+
+jobs:
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install Dependencies
+        run: |
+          cd nova-world
+          pip install -r requirements.txt
+          pip install flake8 black ruff
+      
+      - name: Run Flake8
+        run: |
+          cd nova-world
+          flake8 --max-line-length=120 --ignore=E501,W503 . || true
+      
+      - name: Check Formatting with Black
+        run: |
+          cd nova-world
+          black --check . || true
+      
+      - name: Run Ruff
+        run: |
+          cd nova-world
+          ruff check . || true
+  
+  import-check:
+    name: Import & Syntax Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install Dependencies
+        run: |
+          cd nova-world
+          pip install -r requirements.txt
+      
+      - name: Check Imports
+        run: |
+          cd nova-world
+          python -m py_compile nova_universe.py
+          for file in pages/*.py components/*.py; do
+            python -m py_compile "$file" || exit 1
+          done

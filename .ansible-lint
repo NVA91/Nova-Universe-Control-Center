@@ -1,0 +1,9 @@
+---
+skip_list:
+  - 'name[missing]'
+  - 'unused-variable'
+warn_list:
+  - 'experimental'
+exclude_paths:
+  - '_legacy/'
+  - 'archive/'

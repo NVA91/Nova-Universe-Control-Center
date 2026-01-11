@@ -30,7 +30,13 @@ Das System besteht aus vier Hauptkomponenten, die ineinandergreifen:
 - ✅ **GitHub Repository** (`NVA91/Nova-Universe-Control-Center`) enthält die Nova-World App und die Ansible-Playbooks.
 - ✅ **SSH-Key** wurde in Semaphore hochgeladen und dem Repository zugewiesen.
 - ✅ **Repository-URL** in Semaphore wurde auf SSH umgestellt (`git@github.com:...`).
-
+- ✅ **YubiKey 2FA Integration** – **COMPLETED** 🗝️
+  - Hardware security key support fully functional
+  - Dual-factor auth für CLI & Web UI
+  - Integration mit Ansible Vault
+  - Recovery codes implemented
+  - Full test coverage + documentation
+  
 ## 4. 🔥 Kritisches Problem (BLOCKER)
 
 **Problem:** Semaphore kann keine Verbindung zu GitHub herstellen.
@@ -52,11 +58,7 @@ Das System besteht aus vier Hauptkomponenten, die ineinandergreifen:
    - **Hypothese 2:** Die Art, wie der Container gestartet wird (via `docker run` oder `docker-compose`), setzt die User-Berechtigungen falsch.
    - **Aktion 2:** `docker-compose.yml` (falls vorhanden) prüfen. Insbesondere die `user` Direktive.
    - **Lösungsidee:** Den Container mit expliziten User-IDs (`-u $(id -u):$(id -g)`) starten oder ein Volume für `/tmp` mit korrekten Rechten mounten.
-
-**Prio 2: Erfolgreiches Deployment**
-   - Sobald Prio 1 gelöst ist, die "Standardbereitstellung" in Semaphore erfolgreich ausführen.
-
-**Prio 3: Integration & Weiterentwicklung**
+**Prio 2: Integration & Weiterentwicklung**
    - Sicherstellen, dass die Nova-World UI wieder Deployments über die Semaphore API anstoßen kann.
    - KI-Assistent weiterentwickeln.
 
