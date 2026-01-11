@@ -1,24 +1,21 @@
 ---
-- name: "Deploy Complete Proxmox Stack – Phase 1"
+- name: "Deploy Proxmox Stack – Phase 1: Docker Services"
   hosts: proxmox_nodes
   serial: 1
-  become: true
-  gather_facts: true
+  become: false
+  gather_facts: false
+  
+  # ⭐ KRITISCH: Roles-Path relativ zu Playbook-Verzeichnis
+  vars:
+    ansible_roles_path: "{{ playbook_dir }}/../roles"
   
   pre_tasks:
     - name: "Display Deployment Info"
       debug:
         msg: |
           🚀 Deploying Proxmox Stack to: {{ inventory_hostname }}
-          System: {{ ansible_distribution }} {{ ansible_distribution_version }}
-          CPUs: {{ ansible_processor_vcpus }} | RAM: {{ ansible_memtotal_mb }}MB
 
   roles:
-    - { role: system_update, tags: ["update"] }
-    - { role: system_tuning, tags: ["tuning"] }
-    - { role: network_setup, tags: ["network"] }
-    - { role: storage_setup, tags: ["storage"] }
-    - { role: backup, tags: ["backup"] }
     - { role: docker_services, tags: ["docker"] }
 
   post_tasks:
@@ -26,3 +23,7 @@
       debug:
         msg: |
           ✅ Proxmox Stack deployment finished!
+          
+          🔗 Access Points:
+          - Semaphore:  http://localhost:3000
+          - Traefik Dashboard: https://localhost:8080

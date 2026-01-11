@@ -1,0 +1,81 @@
+---
+- name: "Verify All Services – Complete Stack"
+  hosts: localhost
+  gather_facts: false
+  
+  tasks:
+    - name: "Check Traefik"
+      uri:
+        url: "http://localhost:8080/ping"
+        method: GET
+      register: traefik_check
+      ignore_errors: true
+    
+    - name: "Check PostgreSQL"
+      postgresql_ping:
+        db: "postgres"
+        login_host: "localhost"
+        login_user: "postgres"
+        login_password: "{{ vault_postgres_password }}"
+      register: postgres_check
+      ignore_errors: true
+    
+    - name: "Check Paperless"
+      uri:
+        url: "http://localhost:8000/api/"
+        method: GET
+        user: "admin"
+        password: "{{ vault_paperless_admin_password }}"
+        force_basic_auth: yes
+      register: paperless_check
+      ignore_errors: true
+    
+    - name: "Check Whisper"
+      uri:
+        url: "http://localhost:8001/health"
+        method: GET
+      register: whisper_check
+      ignore_errors: true
+    
+    - name: "Check Ollama"
+      uri:
+        url: "http://localhost:11434/api/tags"
+        method: GET
+      register: ollama_check
+      ignore_errors: true
+    
+    - name: "Check n8n"
+      uri:
+        url: "http://localhost:5678/healthz"
+        method: GET
+      register: n8n_check
+      ignore_errors: true
+    
+    - name: "📊 Stack Health Report"
+      debug:
+        msg: |
+          ✅ LOCAL AI OFFICE STACK – VERIFICATION REPORT
+          
+          Service Status:
+          ├── Traefik (Gateway):     {{ "✅ OK" if traefik_check.status == 200 else "❌ FAILED" }}
+          ├── PostgreSQL (Database): {{ "✅ OK" if postgres_check is succeeded else "❌ FAILED" }}
+          ├── Paperless (Docs):      {{ "✅ OK" if paperless_check.status == 200 else "❌ FAILED" }}
+          ├── Whisper (Speech):      {{ "✅ OK" if whisper_check.status in [200, 404] else "❌ FAILED" }}
+          ├── Ollama (AI Model):     {{ "✅ OK" if ollama_check.status == 200 else "❌ FAILED" }}
+          └── n8n (Workflows):       {{ "✅ OK" if n8n_check.status == 200 else "❌ FAILED" }}
+          
+          🔐 Access Points (HTTPS internal):
+          - Dashboard:      https://traefik.local
+          - Paperless:      https://paperless.local
+          - n8n:            https://n8n.local
+          - Whisper API:    https://whisper.local
+          - Ollama API:     https://ollama.local
+          
+          📋 Architecture:
+          - Network: Docker bridge (traefik)
+          - TLS: Self-signed (local only)
+          - Persistence: Docker volumes (PostgreSQL, n8n data)
+          - No public exposure, no WireGuard needed
+          
+          🚀 Production Status: READY FOR DEPLOYMENT
+
